@@ -1,0 +1,22 @@
+# Phase 81.19.b — out-of-tree standalone subprocess plugin.
+#
+# This manifest is parsed at compile-time via `include_str!` in
+# `EmailPlugin::new()` and shipped alongside the binary so the
+# nexo-rs daemon's discovery walker can register the plugin
+# without spawning the subprocess. Operators add the directory
+# containing this file to `plugins.discovery.search_paths`.
+#
+# Unlike telegram / whatsapp, email is a SINGLE plugin instance
+# that manages N internal accounts via `EmailPluginConfig.accounts`.
+# There is no per-instance `registry_name` divergence —
+# `manifest().plugin.id` and `Plugin::name()` agree at all times.
+
+[plugin]
+id = "email"
+version = "0.1.2"
+name = "Email"
+description = "Email (IMAP/SMTP) channel for nexo agents — multi-account internal."
+min_nexo_version = ">=0.1.0"
+
+[plugin.requires]
+nexo_capabilities = ["broker"]
