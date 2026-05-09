@@ -8,6 +8,7 @@ pub mod attachment_store;
 pub mod bounce_store;
 pub mod cursor;
 pub mod dsn;
+pub mod env_config;
 pub mod events;
 pub mod health;
 pub mod imap_conn;
@@ -23,6 +24,7 @@ pub mod provider_hint;
 pub mod reload;
 pub mod smtp_conn;
 pub mod spf_dkim;
+pub mod subprocess_dispatch;
 pub mod threading;
 pub mod tool;
 
@@ -30,6 +32,7 @@ pub use attachment_store::AttachmentStore;
 pub use bounce_store::{BounceStore, RecipientStatus};
 pub use cursor::{CursorStore, UidCursor};
 pub use dsn::{parse_bounce, BounceClassification, BounceEvent, ParsedBounce};
+pub use env_config::{email_config_from_env, EmailSubprocessBoot, EnvConfigError};
 pub use events::{AckStatus, InboundEvent, OutboundAck, OutboundCommand};
 pub use health::{AccountHealth, WorkerState};
 pub use loop_prevent::{should_skip, SkipReason};
@@ -42,6 +45,7 @@ pub use provider_hint::{provider_hint, ProviderHint};
 pub use reload::{compute_account_diff, AccountDiff};
 pub use smtp_conn::{SmtpClient, SmtpSendOutcome};
 pub use spf_dkim::{check_alignment, decide_warns, parse_spf_includes, AlignmentReport};
+pub use subprocess_dispatch::{dispatch_email_tool, email_tool_defs};
 pub use threading::{
     canonicalize_message_id, enrich_reply_threading, is_self_thread, resolve_thread_root,
     session_id_for_thread, truncate_references, EMAIL_NS,
