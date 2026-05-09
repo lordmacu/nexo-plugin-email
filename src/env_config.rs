@@ -40,6 +40,7 @@ const ENV_DATA_DIR: &str = "NEXO_PLUGIN_EMAIL_DATA_DIR";
 
 /// Bundle returned by [`email_config_from_env`]. The four fields map
 /// 1:1 to `EmailPlugin::new(cfg, creds, google, data_dir)`.
+#[derive(Debug)]
 pub struct EmailSubprocessBoot {
     pub cfg: EmailPluginConfig,
     pub creds: Arc<EmailCredentialStore>,

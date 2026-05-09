@@ -99,7 +99,12 @@ async fn boot_plugin() -> anyhow::Result<Arc<EmailPlugin>> {
 
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {
+    // CRITICAL: tracing MUST write to stderr — stdout is reserved
+    // for JSON-RPC framing. Without `with_writer(io::stderr)` the
+    // default subscriber would emit to stdout and corrupt every
+    // reply with ANSI escape codes + log lines.
     tracing_subscriber::fmt()
+        .with_writer(std::io::stderr)
         .with_env_filter(
             tracing_subscriber::EnvFilter::try_from_default_env()
                 .unwrap_or_else(|_| tracing_subscriber::EnvFilter::new("info")),
