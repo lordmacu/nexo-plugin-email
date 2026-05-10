@@ -2,6 +2,30 @@
 
 All notable changes to `nexo-plugin-email` are documented here.
 
+## [0.1.3] — 2026-05-10
+
+### Fixed
+
+- **Pin rustls + tokio-rustls to `default-features = false,
+  features = ["ring", ...]`** (Phase 27.2-follow-up.b). The
+  default feature set on `rustls 0.23` and `tokio-rustls 0.26`
+  pulls `aws_lc_rs` (and `prefer-post-quantum` which forwards
+  to `aws_lc_rs`). `aws-lc-rs` ships its own bundled BoringSSL
+  + jitterentropy C source that fails to cross-compile to
+  `aarch64-linux-android` (Termux + the Flutter Android FFI
+  target) with `'sys/types.h' file not found` — Bionic libc
+  layout differs from POSIX in subtle ways the upstream code
+  assumes.
+
+  Pinning `ring` (pure-Rust + asm crypto, no C build chain)
+  eliminates the issue entirely and aligns with the rest of
+  the workspace which already runs ring via `sqlx`, `reqwest`,
+  `lettre`, and `async-nats`.
+
+  Behaviour change: none. Both providers implement the same
+  TLS surface area; the runtime choice is invisible to plugin
+  consumers.
+
 ## [0.1.2] — 2026-05-09
 
 ### Added
