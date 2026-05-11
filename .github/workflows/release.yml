@@ -1,12 +1,14 @@
-# Tag push (`v0.1.4`, `v0.1.5`, …) builds release binaries for
-# linux-x64 + macos-arm64 and creates a GitHub Release with the
-# assets attached, in the layout `nexo plugin install` expects:
+# Tag push (`v0.1.5`, `v0.1.6`, …) builds release binaries for every
+# target the `nexo-rs` daemon ships for and creates a GitHub Release
+# in the layout `nexo plugin install` expects:
 #   * bare `nexo-plugin.toml` at release root
 #   * `<plugin_id>-<version>-<target>.tar.gz` containing
 #     `nexo-plugin.toml` + `bin/<plugin_id>` at archive root
 #   * `<...>.tar.gz.sha256` sidecar with the hex digest
 #
-# Operators then run `nexo plugin install lordmacu/nexo-plugin-email`.
+# Targets: x86_64/aarch64 musl static (via cargo-zigbuild, matching
+# `nexo-rs`'s own release) + x86_64/aarch64 macOS. Operators run
+# `nexo plugin install lordmacu/nexo-plugin-email`.
 
 name: release
 
@@ -24,19 +26,19 @@ jobs:
       matrix:
         include:
           - os: ubuntu-latest
-            target: x86_64-unknown-linux-gnu
-            archive: tar.gz
+            target: x86_64-unknown-linux-musl
+          - os: ubuntu-latest
+            target: aarch64-unknown-linux-musl
+          - os: macos-14
+            target: x86_64-apple-darwin
           - os: macos-14
             target: aarch64-apple-darwin
-            archive: tar.gz
     steps:
       - name: Checkout plugin
         uses: actions/checkout@v4
         with:
           path: nexo-rs-plugin-email
-      # Path deps in Cargo.toml resolve `../proyecto/crates/...`
-      # — fetch the daemon workspace alongside the plugin so cargo
-      # can build until the plugin moves to crates.io-only deps.
+      # Path-deps in Cargo.toml resolve `../proyecto/crates/...`.
       - name: Checkout proyecto (path-dep workspace)
         uses: actions/checkout@v4
         with:
@@ -45,15 +47,37 @@ jobs:
       - uses: dtolnay/rust-toolchain@stable
         with:
           targets: ${{ matrix.target }}
-      - name: cargo build --release
+
+      # --- musl-only build prerequisites (mirrors nexo-rs's release) ---
+      - name: Install musl-tools (ring's cc-rs build.rs needs *-linux-musl-gcc)
+        if: contains(matrix.target, 'linux-musl')
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y musl-tools
+      - name: CFLAGS for sqlite-vec on musl (BSD u_intN_t typedefs)
+        if: contains(matrix.target, 'linux-musl')
+        run: |
+          MUSL_CFLAGS='-Du_int8_t=uint8_t -Du_int16_t=uint16_t -Du_int64_t=uint64_t'
+          echo "CFLAGS_x86_64_unknown_linux_musl=${MUSL_CFLAGS}"  >> "$GITHUB_ENV"
+          echo "CFLAGS_aarch64_unknown_linux_musl=${MUSL_CFLAGS}" >> "$GITHUB_ENV"
+
+      - name: Install zig (pinned)
+        uses: goto-bus-stop/setup-zig@v2
+        with:
+          version: "0.13.0"
+      - name: Install cargo-zigbuild
+        run: cargo install cargo-zigbuild --locked --version 0.22.3
+
+      - name: cargo zigbuild --release
         working-directory: nexo-rs-plugin-email
-        run: cargo build --release --target ${{ matrix.target }}
+        run: cargo zigbuild --release --target ${{ matrix.target }}
+
       - name: package (nexo plugin install layout)
         working-directory: nexo-rs-plugin-email
         run: |
           set -euo pipefail
           mkdir -p dist/staging/bin
-          cp target/${{ matrix.target }}/release/nexo-plugin-email \
+          cp "target/${{ matrix.target }}/release/nexo-plugin-email" \
              dist/staging/bin/email
           cp nexo-plugin.toml dist/staging/nexo-plugin.toml
 

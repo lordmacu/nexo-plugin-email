@@ -21,7 +21,7 @@
 
 [package]
 name        = "nexo-plugin-email"
-version     = "0.1.4"
+version     = "0.1.5"
 description = "Email (IMAP/SMTP) channel plugin for Nexo agents (out-of-tree subprocess)."
 edition     = "2021"
 license     = "MIT OR Apache-2.0"
