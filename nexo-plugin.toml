@@ -13,7 +13,7 @@
 
 [plugin]
 id = "email"
-version = "0.1.5"
+version = "0.1.6"
 name = "Email"
 description = "Email (IMAP/SMTP) channel for nexo agents — multi-account internal."
 min_nexo_version = ">=0.1.0"
