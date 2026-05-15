@@ -725,7 +725,7 @@ email:
     fn manifest_parses_and_id_is_email() {
         let m: PluginManifest = toml::from_str(MANIFEST_TOML).unwrap();
         assert_eq!(m.plugin.id, "email");
-        assert_eq!(m.plugin.version.to_string(), "0.2.0");
+        assert_eq!(m.plugin.version.to_string(), "0.3.0");
         assert_eq!(
             m.plugin.requires.nexo_capabilities,
             vec!["broker".to_string()]
@@ -740,7 +740,7 @@ email:
         let plugin = test_email_plugin();
         let nexo: &dyn NexoPlugin = &plugin;
         assert_eq!(nexo.manifest().plugin.id, "email");
-        assert_eq!(nexo.manifest().plugin.version.to_string(), "0.2.0");
+        assert_eq!(nexo.manifest().plugin.version.to_string(), "0.3.0");
     }
 
     #[test]

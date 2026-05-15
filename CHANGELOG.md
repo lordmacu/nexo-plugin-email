@@ -2,6 +2,31 @@
 
 All notable changes to `nexo-plugin-email` are documented here.
 
+## [0.3.0] — 2026-05-15
+
+### Added
+
+- Manifest declares `[plugin.credentials_schema]` (Phase 93.8.a-daemon)
+  with `enabled = true` + `accounts_shape = "array"`. Daemon's
+  `SubprocessNexoPlugin::credential_store()` reads this section
+  and constructs a `RemoteCredentialStore` round-tripping the
+  four `plugin.credentials.*` JSON-RPCs.
+- SDK `on_credentials_list` / `on_credentials_issue` /
+  `on_credentials_resolve_bytes` / `on_credentials_reload`
+  handlers registered in `main.rs`, all backed by
+  `configured_state()`. List returns
+  `EmailPluginConfig.accounts[*].instance`, issue verifies the
+  instance exists, resolve_bytes returns the serde_json-encoded
+  `EmailAccountConfig`.
+- `EmailPluginConfig` + all sub-structs derive `Serialize` so the
+  resolve_bytes handler can round-trip through serde_json.
+
+### Tests
+
+- `tests/credentials_path.rs` — 5 integration tests covering
+  list / issue accept-reject paths / no-configured-state /
+  resolve_bytes round-trip.
+
 ## [0.2.0] — 2026-05-15
 
 ### Breaking

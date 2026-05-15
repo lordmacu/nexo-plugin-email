@@ -133,6 +133,47 @@ async fn main() -> anyhow::Result<()> {
             *nexo_plugin_email::configured_state().write().await = Some(parsed);
             Ok(())
         })
+        // Phase 93.8.c — credential store contribution. Daemon's
+        // `RemoteCredentialStore` round-trips through these four
+        // handlers (per `[plugin.credentials_schema]`). Accounts
+        // map to `EmailPluginConfig.accounts[*].instance`.
+        .on_credentials_list(|| async move {
+            let guard = nexo_plugin_email::configured_state().read().await;
+            let accounts: Vec<String> = guard
+                .as_ref()
+                .map(|c| c.accounts.iter().map(|a| a.instance.clone()).collect())
+                .unwrap_or_default();
+            Ok(nexo_microapp_sdk::plugin::CredentialsListReply {
+                accounts,
+                warnings: Vec::new(),
+            })
+        })
+        .on_credentials_issue(|account_id: String, _agent_id: String| async move {
+            let guard = nexo_plugin_email::configured_state().read().await;
+            let Some(cfg) = guard.as_ref() else {
+                return Err("not_found".to_string());
+            };
+            if cfg.accounts.iter().any(|a| a.instance == account_id) {
+                Ok(())
+            } else {
+                Err("not_found".to_string())
+            }
+        })
+        .on_credentials_resolve_bytes(
+            |account_id: String, _agent_id: String, _fingerprint: String| async move {
+                let guard = nexo_plugin_email::configured_state().read().await;
+                let Some(cfg) = guard.as_ref() else {
+                    return Err("not_found".to_string());
+                };
+                let acct = cfg
+                    .accounts
+                    .iter()
+                    .find(|a| a.instance == account_id)
+                    .ok_or_else(|| "not_found".to_string())?;
+                serde_json::to_vec(acct).map_err(|e| format!("serialize failed: {e}"))
+            },
+        )
+        .on_credentials_reload(|| async move { Ok(()) })
         .on_tool(|invocation: ToolInvocation| async move {
             // Lazy access — if boot hasn't finished, this branch
             // still returns NotFound (subprocess advertises zero
