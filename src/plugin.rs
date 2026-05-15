@@ -5,7 +5,7 @@ use async_trait::async_trait;
 use nexo_auth::email::EmailCredentialStore;
 use nexo_auth::google::GoogleCredentialStore;
 use nexo_broker::AnyBroker;
-use nexo_config::types::plugins::EmailPluginConfig;
+use crate::config::EmailPluginConfig;
 use nexo_core::agent::plugin::{Command, Plugin, Response};
 use nexo_core::agent::plugin_host::{
     NexoPlugin, PluginInitContext, PluginInitError, PluginShutdownError,
@@ -271,7 +271,7 @@ impl EmailPlugin {
     async fn spawn_account(
         &self,
         new_cfg: &EmailPluginConfig,
-        account_cfg: &nexo_config::types::plugins::EmailAccountConfig,
+        account_cfg: &crate::config::EmailAccountConfig,
         cursor: Arc<CursorStore>,
         broker: AnyBroker,
         bounce: Option<Arc<BounceStore>>,
@@ -660,7 +660,7 @@ impl NexoPlugin for EmailPlugin {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use nexo_config::types::plugins::EmailPluginConfigFile;
+    use crate::config::EmailPluginConfigFile;
 
     fn cfg_no_accounts() -> EmailPluginConfig {
         let yaml = r#"
@@ -698,7 +698,7 @@ email:
 #[cfg(test)]
 mod nexo_plugin_tests {
     use super::*;
-    use nexo_config::types::plugins::EmailPluginConfigFile;
+    use crate::config::EmailPluginConfigFile;
 
     fn test_email_config() -> EmailPluginConfig {
         // Empty `accounts` short-circuits Plugin::start with Ok(()) so
@@ -725,7 +725,7 @@ email:
     fn manifest_parses_and_id_is_email() {
         let m: PluginManifest = toml::from_str(MANIFEST_TOML).unwrap();
         assert_eq!(m.plugin.id, "email");
-        assert_eq!(m.plugin.version.to_string(), "0.1.2");
+        assert_eq!(m.plugin.version.to_string(), "0.2.0");
         assert_eq!(
             m.plugin.requires.nexo_capabilities,
             vec!["broker".to_string()]
@@ -740,7 +740,7 @@ email:
         let plugin = test_email_plugin();
         let nexo: &dyn NexoPlugin = &plugin;
         assert_eq!(nexo.manifest().plugin.id, "email");
-        assert_eq!(nexo.manifest().plugin.version.to_string(), "0.1.2");
+        assert_eq!(nexo.manifest().plugin.version.to_string(), "0.2.0");
     }
 
     #[test]

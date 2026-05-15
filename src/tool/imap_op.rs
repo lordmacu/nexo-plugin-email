@@ -5,7 +5,7 @@ use std::sync::Arc;
 use anyhow::{anyhow, Context, Result};
 use nexo_auth::email::EmailCredentialStore;
 use nexo_auth::google::GoogleCredentialStore;
-use nexo_config::types::plugins::EmailAccountConfig;
+use crate::config::EmailAccountConfig;
 
 use crate::imap_conn::{ImapConnection, MailboxState};
 

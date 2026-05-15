@@ -19,7 +19,7 @@
 //! emits a `BounceEvent` even when the report itself happens to
 //! ship `Auto-Submitted` (most do).
 
-use nexo_config::types::plugins::LoopPreventionCfg;
+use crate::config::LoopPreventionCfg;
 
 use crate::events::EmailMeta;
 use crate::threading::is_self_thread;

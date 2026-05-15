@@ -26,7 +26,7 @@ use async_imap::Session;
 use futures::StreamExt;
 use nexo_auth::email::{EmailAccount, EmailAuth};
 use nexo_auth::google::GoogleCredentialStore;
-use nexo_config::types::plugins::{ImapEndpoint, TlsMode};
+use crate::config::{ImapEndpoint, TlsMode};
 use rustls::pki_types::ServerName;
 use rustls::{ClientConfig, RootCertStore};
 use secrecy::ExposeSecret;

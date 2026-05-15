@@ -21,7 +21,7 @@
 
 [package]
 name        = "nexo-plugin-email"
-version     = "0.1.6"
+version     = "0.2.0"
 description = "Email (IMAP/SMTP) channel plugin for Nexo agents (out-of-tree subprocess)."
 edition     = "2021"
 license     = "MIT OR Apache-2.0"
@@ -30,7 +30,7 @@ authors     = ["Cristian García <informacion@cristiangarcia.co>"]
 readme      = "README.md"
 keywords    = ["nexo", "plugin", "email", "imap", "smtp"]
 categories  = ["api-bindings", "email"]
-rust-version = "1.75"
+rust-version = "1.80"
 
 [lib]
 name = "nexo_plugin_email"
@@ -132,3 +132,9 @@ tokio       = { version = "1", features = ["test-util", "macros", "rt-multi-thre
 lto             = "thin"
 codegen-units   = 1
 strip           = "symbols"
+
+# Mirror the proyecto workspace `[workspace.lints.clippy]` allow-list.
+[lints.clippy]
+doc_overindented_list_items = "allow"
+doc_lazy_continuation       = "allow"
+incompatible_msrv           = "allow"

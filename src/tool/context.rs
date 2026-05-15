@@ -7,7 +7,7 @@ use async_trait::async_trait;
 
 use nexo_auth::email::EmailCredentialStore;
 use nexo_auth::google::GoogleCredentialStore;
-use nexo_config::types::plugins::EmailPluginConfig;
+use crate::config::EmailPluginConfig;
 
 use crate::events::OutboundCommand;
 use crate::inbound::HealthMap;
@@ -55,7 +55,7 @@ impl EmailToolContext {
     pub fn account(
         &self,
         instance: &str,
-    ) -> Option<&nexo_config::types::plugins::EmailAccountConfig> {
+    ) -> Option<&crate::config::EmailAccountConfig> {
         self.config.accounts.iter().find(|a| a.instance == instance)
     }
 }

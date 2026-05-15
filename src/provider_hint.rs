@@ -5,7 +5,7 @@
 //! consumer providers; everything else falls through to `Custom`
 //! with empty hosts (the setup wizard prompts the operator manually).
 
-use nexo_config::types::plugins::{EmailProvider, TlsMode};
+use crate::config::{EmailProvider, TlsMode};
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct ProviderHint {

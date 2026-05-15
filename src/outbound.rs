@@ -24,7 +24,7 @@ use dashmap::DashMap;
 use nexo_auth::email::EmailCredentialStore;
 use nexo_auth::google::GoogleCredentialStore;
 use nexo_broker::{AnyBroker, BrokerHandle, Event};
-use nexo_config::types::plugins::{EmailAccountConfig, EmailPluginConfig};
+use crate::config::{EmailAccountConfig, EmailPluginConfig};
 use nexo_resilience::{CircuitBreaker, CircuitBreakerConfig};
 use rand::Rng;
 use tokio::sync::RwLock;

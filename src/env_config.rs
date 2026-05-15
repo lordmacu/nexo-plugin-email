@@ -31,7 +31,7 @@ use std::sync::Arc;
 
 use nexo_auth::email::{load_email_secrets, EmailCredentialStore};
 use nexo_auth::google::{GoogleAccount, GoogleCredentialStore};
-use nexo_config::types::plugins::{EmailPluginConfig, EmailPluginConfigFile};
+use crate::config::{EmailPluginConfig, EmailPluginConfigFile};
 
 const ENV_CONFIG_PATH: &str = "NEXO_PLUGIN_EMAIL_CONFIG_PATH";
 const ENV_GOOGLE_AUTH_PATH: &str = "NEXO_PLUGIN_EMAIL_GOOGLE_AUTH_PATH";
