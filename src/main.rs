@@ -85,9 +85,20 @@ async fn boot_plugin() -> anyhow::Result<Arc<EmailPlugin>> {
     // restart with backoff. Once booted, IMAP / SMTP outages are
     // handled by per-worker retry policies inside `EmailPlugin`.
     plugin
-        .start(broker)
+        .start(broker.clone())
         .await
         .map_err(|e| anyhow::anyhow!("email plugin start failed: {e}"))?;
+
+    // Phase 81.33.b.real v0.4 — populate the runtime handle so
+    // `auto_discovery::metrics_scrape` can read live HealthMap
+    // gauges instead of falling back to None.
+    nexo_plugin_email::runtime_handle::set_runtime_handle(plugin.clone()).await;
+
+    // Phase 81.33.b.real v0.4 — spawn auto-discovery broker
+    // subscribers (HTTP routes, admin RPC, metrics scrape) on the
+    // same broker the plugin uses. Failure isolation per task; a
+    // dropped subscriber doesn't take down the plugin process.
+    spawn_auto_discovery_subscribers(broker);
 
     tracing::info!(
         target = "nexo_plugin_email",
@@ -199,4 +210,74 @@ async fn main() -> anyhow::Result<()> {
 
     adapter.run_stdio().await?;
     Ok(())
+}
+
+/// Phase 81.33.b.real v0.4 — auto-discovery broker subscriber
+/// loop. Spawns one tokio task per request-reply topic family.
+/// Each task subscribes, parses `Message` from each inbound
+/// `Event.payload`, dispatches to the matching async handler,
+/// and publishes the reply back to `msg.reply_to`.
+fn spawn_auto_discovery_subscribers(broker: AnyBroker) {
+    use nexo_plugin_email::auto_discovery as ad;
+
+    spawn_one(broker.clone(), "plugin.email.http.request", |_b, p| async move {
+        ad::http_request(&p).await
+    });
+    spawn_one(broker.clone(), "plugin.email.metrics.scrape", |_b, p| async move {
+        ad::metrics_scrape(&p).await
+    });
+    spawn_one(broker, "plugin.email.admin.>", |_b, p| async move {
+        ad::admin_handle(&p).await
+    });
+}
+
+fn spawn_one<F, Fut>(broker: AnyBroker, topic: &'static str, handler: F)
+where
+    F: Fn(AnyBroker, serde_json::Value) -> Fut + Send + Sync + 'static,
+    Fut: std::future::Future<Output = serde_json::Value> + Send + 'static,
+{
+    use nexo_broker::{BrokerHandle, Event, Message};
+    tokio::spawn(async move {
+        let mut sub = match broker.subscribe(topic).await {
+            Ok(s) => s,
+            Err(e) => {
+                tracing::warn!(
+                    target = "email.auto_discovery",
+                    topic,
+                    error = %e,
+                    "subscribe failed; topic will not receive requests"
+                );
+                return;
+            }
+        };
+        tracing::info!(target = "email.auto_discovery", topic, "subscriber up");
+        while let Some(event) = sub.next().await {
+            let Ok(msg) = serde_json::from_value::<Message>(event.payload) else {
+                continue;
+            };
+            let Some(reply_to) = msg.reply_to.clone() else {
+                continue;
+            };
+            let reply_payload = handler(broker.clone(), msg.payload.clone()).await;
+            let reply_msg = Message::new(reply_to.clone(), reply_payload);
+            let reply_event = Event::new(
+                reply_to.clone(),
+                "email",
+                match serde_json::to_value(&reply_msg) {
+                    Ok(v) => v,
+                    Err(_) => continue,
+                },
+            );
+            if let Err(e) = broker.publish(&reply_to, reply_event).await {
+                tracing::warn!(
+                    target = "email.auto_discovery",
+                    topic,
+                    reply_to = %reply_to,
+                    error = %e,
+                    "failed to publish reply"
+                );
+            }
+        }
+        tracing::debug!(target = "email.auto_discovery", topic, "subscriber stream ended");
+    });
 }

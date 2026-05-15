@@ -5,6 +5,7 @@
 //! loop-prevention, DSN handling and SPF/DKIM checks land in 48.2..48.10.
 
 pub mod attachment_store;
+pub mod auto_discovery;
 pub mod bounce_store;
 pub mod config;
 pub mod configured_state;
@@ -24,6 +25,7 @@ pub mod outbound_queue;
 pub mod plugin;
 pub mod provider_hint;
 pub mod reload;
+pub mod runtime_handle;
 pub mod smtp_conn;
 pub mod spf_dkim;
 pub mod subprocess_dispatch;

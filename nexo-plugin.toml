@@ -13,13 +13,60 @@
 
 [plugin]
 id = "email"
-version = "0.3.0"
+version = "0.4.0"
 name = "Email"
 description = "Email (IMAP/SMTP) channel for nexo agents — multi-account internal."
 min_nexo_version = ">=0.1.0"
 
 [plugin.requires]
 nexo_capabilities = ["broker"]
+
+# Phase 81.33.b.real Stages 2+4+5 — auto-discovery broker
+# handler subscribe allowlist. Defense-in-depth so the plugin
+# can only handle the topics it owns.
+[plugin.capabilities.broker]
+subscribe = [
+    "plugin.outbound.email",
+    "plugin.outbound.email.>",
+    "plugin.email.http.request",
+    "plugin.email.admin.>",
+    "plugin.email.metrics.scrape",
+]
+publish   = ["plugin.inbound.email", "plugin.inbound.email.>"]
+
+# Phase 81.33.b.real Stage 2 — daemon mounts HTTP proxy under
+# `/email`. Forwards requests via broker JSON-RPC. The plugin
+# owns its internal router (see `src/auto_discovery.rs::http_request`).
+[plugin.http]
+mount_prefix    = "/email"
+timeout_seconds = 30
+
+# Phase 81.33.b.real Stage 4 — admin RPC commands forwarded via
+# broker. Daemon receives `nexo/admin/email/<verb>` + forwards
+# to `plugin.email.admin.<verb>`.
+[plugin.admin]
+method_prefix       = "nexo/admin/email/"
+broker_topic_prefix = "plugin.email.admin"
+timeout_seconds     = 15
+
+# Phase 81.33.b.real Stage 5 — Prometheus metrics scrape via
+# broker. Replaces the legacy in-process direct call from the
+# daemon's `run_metrics_server` to
+# `nexo_plugin_email::metrics::render_prometheus`.
+[plugin.metrics]
+prometheus          = true
+broker_topic_prefix = "plugin.email"
+timeout_seconds     = 5
+
+# Phase 81.33.b.real Stage 6 — setup wizard dashboard surface.
+# Email is single-instance (multi-account internal); auth state
+# probed via the presence of `secrets/email_password.txt`.
+[plugin.dashboard.layout]
+kind = "single"
+
+[plugin.dashboard.auth_check]
+kind = "file_presence"
+path = "email_password.txt"
 
 # Phase 93.4.c — declarative config contract. Daemon delivers
 # operator YAML at `cfg.plugins.entries.email` (Phase 93.3) via
