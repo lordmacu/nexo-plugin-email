@@ -9,15 +9,15 @@
 //! Field shapes mirror `nexo_config::types::plugins::Email*`
 //! verbatim — operator YAML keeps working unchanged.
 
-use serde::Deserialize;
+use serde::{Deserialize, Serialize};
 
-#[derive(Debug, Deserialize, Clone)]
+#[derive(Debug, Deserialize, Serialize, Clone)]
 #[serde(deny_unknown_fields)]
 pub struct EmailPluginConfigFile {
     pub email: EmailPluginConfig,
 }
 
-#[derive(Debug, Deserialize, Clone)]
+#[derive(Debug, Deserialize, Serialize, Clone)]
 #[serde(deny_unknown_fields)]
 pub struct EmailPluginConfig {
     #[serde(default = "default_email_enabled")]
@@ -48,7 +48,7 @@ pub struct EmailPluginConfig {
     pub accounts: Vec<EmailAccountConfig>,
 }
 
-#[derive(Debug, Deserialize, Clone)]
+#[derive(Debug, Deserialize, Serialize, Clone)]
 #[serde(deny_unknown_fields)]
 pub struct LoopPreventionCfg {
     #[serde(default = "default_true")]
@@ -78,7 +78,7 @@ impl Default for LoopPreventionCfg {
     }
 }
 
-#[derive(Debug, Deserialize, Clone)]
+#[derive(Debug, Deserialize, Serialize, Clone)]
 #[serde(deny_unknown_fields)]
 pub struct EmailAccountConfig {
     pub instance: String,
@@ -95,7 +95,7 @@ pub struct EmailAccountConfig {
     pub bootstrap_limit: Option<u32>,
 }
 
-#[derive(Debug, Deserialize, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Deserialize, Serialize, Clone, Copy, PartialEq, Eq)]
 #[serde(rename_all = "snake_case")]
 pub enum EmailProvider {
     Gmail,
@@ -105,7 +105,7 @@ pub enum EmailProvider {
     Custom,
 }
 
-#[derive(Debug, Deserialize, Clone)]
+#[derive(Debug, Deserialize, Serialize, Clone)]
 #[serde(deny_unknown_fields)]
 pub struct ImapEndpoint {
     pub host: String,
@@ -114,7 +114,7 @@ pub struct ImapEndpoint {
     pub tls: TlsMode,
 }
 
-#[derive(Debug, Deserialize, Clone)]
+#[derive(Debug, Deserialize, Serialize, Clone)]
 #[serde(deny_unknown_fields)]
 pub struct SmtpEndpoint {
     pub host: String,
@@ -123,7 +123,7 @@ pub struct SmtpEndpoint {
     pub tls: TlsMode,
 }
 
-#[derive(Debug, Deserialize, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Deserialize, Serialize, Clone, Copy, PartialEq, Eq)]
 #[serde(rename_all = "snake_case")]
 pub enum TlsMode {
     Plain,
@@ -131,7 +131,7 @@ pub enum TlsMode {
     ImplicitTls,
 }
 
-#[derive(Debug, Deserialize, Clone)]
+#[derive(Debug, Deserialize, Serialize, Clone)]
 #[serde(deny_unknown_fields)]
 pub struct EmailFolders {
     #[serde(default = "default_folder_inbox")]
@@ -152,7 +152,7 @@ impl Default for EmailFolders {
     }
 }
 
-#[derive(Debug, Deserialize, Clone, Default)]
+#[derive(Debug, Deserialize, Serialize, Clone, Default)]
 #[serde(deny_unknown_fields)]
 pub struct EmailFilters {
     #[serde(default)]
