@@ -2,6 +2,23 @@
 
 All notable changes to `nexo-plugin-email` are documented here.
 
+## [0.2.0] — 2026-05-15
+
+### Breaking
+
+- Plugin owns its config types. `nexo_config::types::plugins::{EmailPluginConfig, EmailPluginConfigFile, EmailAccountConfig, LoopPreventionCfg, EmailFolders, EmailFilters, EmailProvider, ImapEndpoint, SmtpEndpoint, TlsMode}` no longer re-imported; equivalents live in `nexo_plugin_email::config`. Field shapes byte-for-byte identical.
+- `rust-version` bumped `1.75 → 1.80` so `std::sync::OnceLock<Arc<...>>` static init compiles without `once_cell::sync::Lazy`.
+
+### Added
+
+- Manifest declares `[plugin.config_schema]` (Phase 93.1) with `shape = "object"` (single-instance plugin — `cfg.plugins.email` is a map, not a sequence). JSON Schema covers every operator-visible knob.
+- SDK `on_configure(...)` handler (Phase 93.4.a-sdk) receives operator YAML via `plugin.configure` JSON-RPC (Phase 93.2); caches `EmailPluginConfig` via the new `configured_state()` accessor.
+- 5 new integration tests in `tests/configure_path.rs`.
+
+### Backward compatibility
+
+- Env-var fallback (`NEXO_PLUGIN_EMAIL_*` vars) keeps working when daemon doesn't deliver `plugin.configure`. Removed in 0.3.0 once Phase 93.5 closes the daemon-side typed-fields window.
+
 ## [0.1.3] — 2026-05-10
 
 ### Fixed

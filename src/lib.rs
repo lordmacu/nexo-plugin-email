@@ -6,6 +6,8 @@
 
 pub mod attachment_store;
 pub mod bounce_store;
+pub mod config;
+pub mod configured_state;
 pub mod cursor;
 pub mod dsn;
 pub mod env_config;
@@ -30,6 +32,11 @@ pub mod tool;
 
 pub use attachment_store::AttachmentStore;
 pub use bounce_store::{BounceStore, RecipientStatus};
+pub use config::{
+    EmailAccountConfig, EmailFilters, EmailFolders, EmailPluginConfig, EmailPluginConfigFile,
+    EmailProvider, ImapEndpoint, LoopPreventionCfg, SmtpEndpoint, TlsMode,
+};
+pub use configured_state::configured_state;
 pub use cursor::{CursorStore, UidCursor};
 pub use dsn::{parse_bounce, BounceClassification, BounceEvent, ParsedBounce};
 pub use env_config::{email_config_from_env, EmailSubprocessBoot, EnvConfigError};
@@ -61,7 +68,6 @@ use std::sync::Arc;
 
 use nexo_auth::email::EmailCredentialStore;
 use nexo_auth::google::GoogleCredentialStore;
-use nexo_config::types::plugins::EmailPluginConfig;
 use nexo_core::agent::nexo_plugin_registry::PluginFactory;
 use nexo_core::agent::plugin_host::NexoPlugin;
 

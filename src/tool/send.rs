@@ -248,7 +248,7 @@ mod tests {
     use dashmap::DashMap;
     use nexo_auth::email::EmailCredentialStore;
     use nexo_auth::google::GoogleCredentialStore;
-    use nexo_config::types::plugins::EmailPluginConfigFile;
+    use crate::config::EmailPluginConfigFile;
     use std::sync::Mutex;
 
     /// Test stub of `DispatcherHandle` that records every call and

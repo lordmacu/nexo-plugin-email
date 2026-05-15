@@ -13,10 +13,46 @@
 
 [plugin]
 id = "email"
-version = "0.1.6"
+version = "0.2.0"
 name = "Email"
 description = "Email (IMAP/SMTP) channel for nexo agents — multi-account internal."
 min_nexo_version = ">=0.1.0"
 
 [plugin.requires]
 nexo_capabilities = ["broker"]
+
+# Phase 93.4.c — declarative config contract. Daemon delivers
+# operator YAML at `cfg.plugins.entries.email` (Phase 93.3) via
+# `plugin.configure` JSON-RPC (Phase 93.2); SDK `on_configure`
+# handler deserialises into `EmailPluginConfig` (single-instance
+# shape, no Vec wrapper).
+[plugin.config_schema]
+shape = "object"
+schema = '''{
+  "type": "object",
+  "properties": {
+    "enabled":                   { "type": "boolean" },
+    "max_body_bytes":            { "type": "integer" },
+    "max_attachment_bytes":      { "type": "integer" },
+    "attachment_retention_days": { "type": "integer" },
+    "max_dlq_lines":             { "type": "integer" },
+    "bounce_retention_days":     { "type": "integer" },
+    "attachments_dir":           { "type": "string" },
+    "outbound_queue_dir":        { "type": "string" },
+    "poll_fallback_seconds":     { "type": "integer" },
+    "idle_reissue_minutes":      { "type": "integer" },
+    "spf_dkim_warn":             { "type": "boolean" },
+    "loop_prevention": {
+      "type": "object",
+      "properties": {
+        "auto_submitted": { "type": "boolean" },
+        "list_headers":   { "type": "boolean" },
+        "self_from":      { "type": "boolean" },
+        "spam_flag":      { "type": "boolean" },
+        "feedback_id":    { "type": "boolean" },
+        "esp_mailer":     { "type": "boolean" }
+      }
+    },
+    "accounts": { "type": "array" }
+  }
+}'''

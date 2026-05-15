@@ -122,6 +122,17 @@ async fn main() -> anyhow::Result<()> {
     // the static `OnceCell` once IMAP/SMTP are live.
     let adapter = PluginAdapter::new(MANIFEST)?
         .declare_tools(email_tool_defs())
+        // Phase 93.4.c — receive the operator YAML slice via the
+        // host's `plugin.configure` JSON-RPC (Phase 93.2). Single-
+        // instance shape per manifest `[plugin.config_schema]
+        // shape = "object"`.
+        .on_configure(|value: serde_yaml::Value| async move {
+            let parsed: nexo_plugin_email::config::EmailPluginConfig =
+                serde_yaml::from_value(value)
+                    .map_err(|e| format!("invalid email config: {e}"))?;
+            *nexo_plugin_email::configured_state().write().await = Some(parsed);
+            Ok(())
+        })
         .on_tool(|invocation: ToolInvocation| async move {
             // Lazy access — if boot hasn't finished, this branch
             // still returns NotFound (subprocess advertises zero

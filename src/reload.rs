@@ -14,7 +14,7 @@
 //! down, but `EmailPlugin::apply_added_accounts` is the only side
 //! that's wired today.
 
-use nexo_config::types::plugins::{EmailAccountConfig, EmailPluginConfig};
+use crate::config::{EmailAccountConfig, EmailPluginConfig};
 
 #[derive(Debug, Clone, Default)]
 pub struct AccountDiff {
@@ -89,7 +89,7 @@ fn accounts_equal(a: &EmailAccountConfig, b: &EmailAccountConfig) -> bool {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use nexo_config::types::plugins::EmailPluginConfigFile;
+    use crate::config::EmailPluginConfigFile;
 
     fn cfg(accounts_yaml: &str) -> EmailPluginConfig {
         let yaml = format!("email:\n  accounts:\n{accounts_yaml}");

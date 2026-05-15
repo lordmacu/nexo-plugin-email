@@ -17,7 +17,7 @@ use lettre::transport::smtp::AsyncSmtpTransport;
 use lettre::{AsyncTransport, Tokio1Executor};
 use nexo_auth::email::{EmailAccount, EmailAuth};
 use nexo_auth::google::GoogleCredentialStore;
-use nexo_config::types::plugins::{SmtpEndpoint, TlsMode};
+use crate::config::{SmtpEndpoint, TlsMode};
 use secrecy::ExposeSecret;
 
 use crate::outbound_queue::SmtpEnvelope;

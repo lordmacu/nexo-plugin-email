@@ -14,7 +14,7 @@ use std::sync::Arc;
 use std::time::Duration;
 
 use nexo_broker::AnyBroker;
-use nexo_config::types::plugins::EmailPluginConfigFile;
+use nexo_plugin_email::EmailPluginConfigFile;
 use nexo_plugin_email::{
     bounce_store::BounceStore,
     dsn::{BounceClassification, BounceEvent},
@@ -26,7 +26,7 @@ use nexo_plugin_email::{
 
 use std::collections::BTreeMap;
 
-fn cfg(declared: &[(&str, &str)]) -> nexo_config::types::plugins::EmailPluginConfig {
+fn cfg(declared: &[(&str, &str)]) -> nexo_plugin_email::EmailPluginConfig {
     let mut yaml = String::from("email:\n  accounts:\n");
     for (instance, address) in declared {
         yaml.push_str(&format!(
@@ -224,7 +224,7 @@ async fn bounce_event_persists_and_increments_count() {
 
 #[tokio::test]
 async fn synthetic_self_bounce_skips_via_loop_prevention() {
-    use nexo_config::types::plugins::LoopPreventionCfg;
+    use nexo_plugin_email::LoopPreventionCfg;
     let mut meta = empty_meta("ops@example.com");
     let cfg = LoopPreventionCfg::default();
     let reason = nexo_plugin_email::loop_prevent::should_skip(&meta, "ops@example.com", &cfg);

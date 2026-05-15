@@ -13,7 +13,7 @@ use dashmap::DashMap;
 use nexo_auth::email::EmailCredentialStore;
 use nexo_auth::google::GoogleCredentialStore;
 use nexo_broker::{AnyBroker, BrokerHandle, Event};
-use nexo_config::types::plugins::{EmailAccountConfig, EmailPluginConfig};
+use crate::config::{EmailAccountConfig, EmailPluginConfig};
 use nexo_resilience::CircuitBreaker;
 use rand::Rng;
 use tokio::sync::RwLock;
@@ -183,7 +183,7 @@ struct AccountWorker {
     /// Phase 48.8 — Loop-prevention toggles cloned from the plugin
     /// config so the worker doesn't reach back into shared state on
     /// the hot path.
-    loop_prevention: nexo_config::types::plugins::LoopPreventionCfg,
+    loop_prevention: crate::config::LoopPreventionCfg,
     /// Phase 48 follow-up #4 — persistent bounce history. `None`
     /// when the operator hasn't opted in; populated by
     /// `EmailPlugin::start` when the SQLite file is reachable.
