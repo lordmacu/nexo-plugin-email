@@ -110,6 +110,13 @@ async fn boot_plugin() -> anyhow::Result<Arc<EmailPlugin>> {
 
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {
+    // Phase 81.20.x F1 — Stage 8 cargo-install ergonomics. When
+    // the daemon's binary-mode discovery walker probes us with
+    // `nexo-plugin-email --print-manifest` we emit the bundled
+    // TOML to stdout and exit 0 BEFORE tracing init / broker
+    // wiring — the walker needs only the manifest bytes.
+    nexo_microapp_sdk::plugin::print_manifest_if_requested(MANIFEST);
+
     // CRITICAL: tracing MUST write to stderr — stdout is reserved
     // for JSON-RPC framing. Without `with_writer(io::stderr)` the
     // default subscriber would emit to stdout and corrupt every
@@ -232,6 +239,23 @@ async fn main() -> anyhow::Result<()> {
 /// and publishes the reply back to `msg.reply_to`.
 fn spawn_auto_discovery_subscribers(broker: AnyBroker) {
     use nexo_plugin_email::auto_discovery as ad;
+
+    // Phase 81.20.x F1 — Stage 1 pairing adapter subscribers.
+    spawn_one(
+        broker.clone(),
+        "plugin.email.pairing.normalize_sender",
+        |_b, p| async move { ad::pairing_normalize_sender(&p) },
+    );
+    spawn_one(
+        broker.clone(),
+        "plugin.email.pairing.send_reply",
+        |_b, p| async move { ad::pairing_send_reply(&p).await },
+    );
+    spawn_one(
+        broker.clone(),
+        "plugin.email.pairing.send_qr_image",
+        |_b, p| async move { ad::pairing_send_qr_image(&p).await },
+    );
 
     spawn_one(broker.clone(), "plugin.email.http.request", |_b, p| async move {
         ad::http_request(&p).await

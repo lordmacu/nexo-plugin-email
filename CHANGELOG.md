@@ -2,6 +2,56 @@
 
 All notable changes to `nexo-plugin-email` are documented here.
 
+## [0.6.0] — 2026-05-16
+
+Subprocess-ready release. The plugin is now fully self-describing
+via manifest auto-discovery (all 5 stages of Phase 81.33.b.real)
+and can be installed via `cargo install nexo-plugin-email` —
+the daemon's binary-mode discovery walker finds it in
+`$HOME/.cargo/bin/`, probes `--print-manifest`, and wires
+broker handlers without any daemon-side code change.
+
+### Added
+
+- **Stage 1 — pairing adapter.** `[plugin.pairing]` +
+  `[plugin.pairing.adapter]` manifest sections declaring a
+  form-based flow (operator pastes IMAP/SMTP credentials in
+  the admin UI). 7 fields: `instance`, `address`, `auth_kind`,
+  `imap_host`, `smtp_host`, `password`. Broker handlers:
+    - `pairing_normalize_sender` — canonicalize email
+      addresses (Gmail dot-insensitivity + plus-tag stripping).
+    - `pairing_send_reply` — stub `not_supported`; email
+      pairing validates via `probe_connectivity` (the setup
+      wizard's TCP+TLS+AUTH handshake) rather than dispatching
+      a real message.
+    - `pairing_send_qr_image` — stub `not_supported`; email
+      is form-paired (no QR).
+- **Stage 8 — binary entrypoint.** `[plugin.entrypoint]
+  command = "nexo-plugin-email"` enables the daemon walker to
+  spawn the binary. `main()` invokes
+  `nexo_microapp_sdk::plugin::print_manifest_if_requested(MANIFEST)`
+  as its first statement so `--print-manifest` prints the
+  bundled TOML and exits 0 without touching tracing / broker.
+- **`/email/health` JSON snapshot.** Migrated from a plain-text
+  "email plugin ok" reply to the same JSON-array shape that
+  the daemon's legacy `render_email_health` used to produce.
+  Rows carry live `WorkerState`, `last_idle_alive_ts`,
+  `consecutive_failures`, `outbound_queue_depth`, etc. so
+  existing operator dashboards keep working — the snapshot is
+  now rendered inside the subprocess instead of the daemon.
+
+### Changed
+
+- **`nexo-email-probe` v0.1.0 dep.** `imap_conn`, `smtp_conn`,
+  `provider_hint`, `spf_dkim` modules + shared data types
+  (`TlsMode`, `EmailProvider`, `ImapEndpoint`, `SmtpEndpoint`,
+  `SmtpEnvelope`) extracted to the new `nexo-email-probe`
+  crate so the framework's setup wizard can validate email
+  credentials without depending on the full plugin crate.
+  Plugin re-exports the same surface for in-tree callers.
+- **`[plugin.capabilities.broker.subscribe]`** extended with
+  3 pairing topics (`plugin.email.pairing.{normalize_sender,send_reply,send_qr_image}`).
+
 ## [0.5.0] — 2026-05-16
 
 Multi-tenant release. Operators can declare N tenants in their

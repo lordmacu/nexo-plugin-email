@@ -13,7 +13,7 @@
 
 [plugin]
 id = "email"
-version = "0.5.2"
+version = "0.6.0"
 name = "Email"
 description = "Email (IMAP/SMTP) channel for nexo agents — multi-account internal."
 min_nexo_version = ">=0.1.0"
@@ -21,18 +21,91 @@ min_nexo_version = ">=0.1.0"
 [plugin.requires]
 nexo_capabilities = ["broker"]
 
-# Phase 81.33.b.real Stages 2+4+5 — auto-discovery broker
+# Phase 81.33.b.real Stages 1+2+4+5 — auto-discovery broker
 # handler subscribe allowlist. Defense-in-depth so the plugin
 # can only handle the topics it owns.
 [plugin.capabilities.broker]
 subscribe = [
     "plugin.outbound.email",
     "plugin.outbound.email.>",
+    # Phase 81.20.x F1 — Stage 1 pairing adapter handlers.
+    # Email is form-paired (no QR); `send_qr_image` stubs
+    # `not_supported` so daemon's `GenericBrokerPairingAdapter`
+    # degrades gracefully.
+    "plugin.email.pairing.normalize_sender",
+    "plugin.email.pairing.send_reply",
+    "plugin.email.pairing.send_qr_image",
     "plugin.email.http.request",
     "plugin.email.admin.>",
     "plugin.email.metrics.scrape",
 ]
 publish   = ["plugin.inbound.email", "plugin.inbound.email.>"]
+
+# Phase 81.20.x F1 — Stage 1 pairing adapter. Form-based (no
+# QR): operator pastes IMAP/SMTP credentials in the admin UI;
+# daemon's `GenericBrokerPairingAdapter` forwards
+# `PairingChannelAdapter` trait calls to:
+#   plugin.email.pairing.normalize_sender
+#   plugin.email.pairing.send_reply
+#   plugin.email.pairing.send_qr_image  (stub error)
+[plugin.pairing]
+kind           = "form"
+label          = "Email"
+instance_field = "instance"
+
+[plugin.pairing.adapter]
+channel_id          = "email"
+broker_topic_prefix = "plugin.email"
+
+[plugin.pairing.instructions]
+es = "Pega las credenciales IMAP/SMTP de la cuenta de correo. Si es Gmail, podemos sugerir OAuth."
+en = "Paste the IMAP/SMTP credentials for the email account. If it's Gmail, we can suggest OAuth."
+
+[[plugin.pairing.fields]]
+name        = "instance"
+label       = "Instance name"
+placeholder = "support"
+required    = true
+
+[[plugin.pairing.fields]]
+name        = "address"
+label       = "Email address"
+placeholder = "team@example.com"
+required    = true
+
+[[plugin.pairing.fields]]
+name        = "auth_kind"
+label       = "Auth method"
+placeholder = "password | google_oauth"
+help        = "Type 'password' for IMAP/SMTP basic auth, or 'google_oauth' to reuse Gmail OAuth credentials configured in google-auth.yaml."
+required    = true
+
+[[plugin.pairing.fields]]
+name        = "imap_host"
+label       = "IMAP host"
+placeholder = "imap.example.com"
+required    = false   # derived from `address` via provider_hint when blank
+
+[[plugin.pairing.fields]]
+name        = "smtp_host"
+label       = "SMTP host"
+placeholder = "smtp.example.com"
+required    = false   # derived from `address` via provider_hint when blank
+
+[[plugin.pairing.fields]]
+name        = "password"
+label       = "Password / app password"
+sensitive   = true
+required    = false   # required if auth_kind == "password"
+
+# Phase 81.20.x F1 — Stage 8 binary entrypoint. Daemon's
+# binary-mode discovery walker (`PluginDiscoveryConfig`)
+# invokes `<command> --print-manifest` to bootstrap. Operator
+# installs via `cargo install nexo-plugin-email`; binary lands
+# in `$HOME/.cargo/bin/nexo-plugin-email` and the walker
+# auto-discovers without manifest config edit.
+[plugin.entrypoint]
+command = "nexo-plugin-email"
 
 # Phase 81.33.b.real Stage 2 — daemon mounts HTTP proxy under
 # `/email`. Forwards requests via broker JSON-RPC. The plugin

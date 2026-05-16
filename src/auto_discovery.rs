@@ -1,12 +1,15 @@
-//! Phase 81.33.b.real Stages 2+4+5+6 — auto-discovery broker
-//! handlers for the email plugin (v0.4).
+//! Phase 81.33.b.real Stages 1+2+4+5+6 — auto-discovery broker
+//! handlers for the email plugin (v0.6).
 //!
-//! Email has no QR pairing flow (auth = IMAP/SMTP password
-//! credentials), so Stage 1 (`pairing.adapter`) is N/A — there's
-//! no `pairing_normalize_sender` / `send_reply` / `send_qr_image`.
-//! The other four stages do apply.
+//! Phase 81.20.x F1 adds Stage 1 (`pairing.adapter`) as a
+//! form-based flow: the operator pastes IMAP/SMTP credentials
+//! in the admin UI instead of scanning a QR. The plugin still
+//! exposes `pairing_send_qr_image` as a stub returning
+//! `not_supported` so the daemon's `GenericBrokerPairingAdapter`
+//! can degrade gracefully when the trait call fires.
 //!
 //! Contract docs in the daemon repo:
+//! - Pairing adapter — `proyecto/docs/src/plugins/manifest-pairing-adapter.md`
 //! - HTTP routes    — `proyecto/docs/src/plugins/manifest-http.md`
 //! - Admin RPC      — `proyecto/docs/src/plugins/manifest-admin.md`
 //! - Metrics scrape — `proyecto/docs/src/plugins/manifest-metrics.md`
@@ -18,6 +21,84 @@ use serde_json::{json, Value};
 use crate::configured_state;
 use crate::runtime_handle;
 
+// ── Stage 1 — pairing adapter ──────────────────────────────────
+
+/// `plugin.email.pairing.normalize_sender` — canonicalize an
+/// email address (lowercase, trim whitespace). Gmail's dot-
+/// insensitivity is honoured for `@gmail.com` / `@googlemail.com`
+/// — `Foo.Bar+spam@Gmail.com` collapses to `foobar@gmail.com`.
+/// Returns `{ "normalized": <string> }` on success and
+/// `{ "normalized": null }` when the input doesn't look like an
+/// email address (daemon-side `GenericBrokerPairingAdapter`
+/// caches the result either way).
+pub fn pairing_normalize_sender(request: &Value) -> Value {
+    let raw = request
+        .get("raw")
+        .and_then(|v| v.as_str())
+        .unwrap_or("")
+        .trim();
+    let normalized = canonicalize_email(raw);
+    json!({ "normalized": normalized })
+}
+
+/// `plugin.email.pairing.send_reply` — stub. Email pairing
+/// validates connectivity via `probe_connectivity` (TCP+TLS+AUTH
+/// handshake) in the setup wizard rather than dispatching a real
+/// message. The daemon's `PairingChannelAdapter::send_reply`
+/// trait call is invoked uniformly across channels but doesn't
+/// apply to email pairing; callers should route via the regular
+/// `email_send_message` tool when they need to actually send.
+pub async fn pairing_send_reply(_request: &Value) -> Value {
+    json!({
+        "ok": false,
+        "error": "email plugin pairing is connectivity-probed; send_reply not used. Use the email_send_message tool for actual sends.",
+    })
+}
+
+/// `plugin.email.pairing.send_qr_image` — stub. Email is
+/// form-paired (operator submits IMAP/SMTP credentials); the
+/// daemon's `PairingChannelAdapter::send_qr_image` trait call
+/// is invoked uniformly across channels but never applies here.
+/// Return a structured `not_supported` so the daemon can log
+/// and degrade.
+pub async fn pairing_send_qr_image(_request: &Value) -> Value {
+    json!({
+        "ok": false,
+        "error": "email plugin is form-paired; QR pairing not supported",
+    })
+}
+
+/// Canonicalize an email address. Returns `Some(canonical)` on
+/// valid input, `None` otherwise. Rules:
+///   * Lowercase domain (DNS is case-insensitive).
+///   * Lowercase localpart (RFC 5321 says case-sensitive, but
+///     virtually no MTA in 2026 enforces — case-folding here
+///     keeps the dedupe cache hot).
+///   * Strip Gmail dots + plus-tags ONLY for `@gmail.com` and
+///     `@googlemail.com` (their published dot-insensitivity
+///     rule; every other domain treats them literally).
+fn canonicalize_email(raw: &str) -> Option<String> {
+    let (local, domain) = raw.split_once('@')?;
+    if local.is_empty() || domain.is_empty() {
+        return None;
+    }
+    if !domain.contains('.') {
+        return None;
+    }
+    let local = local.to_ascii_lowercase();
+    let domain = domain.to_ascii_lowercase();
+    let canon_local = if matches!(domain.as_str(), "gmail.com" | "googlemail.com") {
+        let no_plus = local.split('+').next().unwrap_or("");
+        no_plus.replace('.', "")
+    } else {
+        local
+    };
+    if canon_local.is_empty() {
+        return None;
+    }
+    Some(format!("{canon_local}@{domain}"))
+}
+
 // ── Stage 2 — HTTP routes ──────────────────────────────────────
 
 pub async fn http_request(request: &Value) -> Value {
@@ -27,11 +108,21 @@ pub async fn http_request(request: &Value) -> Value {
         .and_then(|v| v.as_str())
         .unwrap_or("GET");
     match (method, path) {
-        ("GET", "/email/health") => respond(
-            200,
-            "text/plain; charset=utf-8",
-            b"email plugin ok\n",
-        ),
+        ("GET", "/email/health") => {
+            // Phase 81.20.x F1 — health snapshot migrated from the
+            // daemon's legacy `render_email_health` helper
+            // (`proyecto/src/main.rs:15660`). Returns the same JSON
+            // array shape so existing operator dashboards / scrapers
+            // see no breakage; the snapshot is rendered inside the
+            // subprocess so the daemon no longer owns the typed
+            // `HealthMap` handle.
+            let body = render_health_snapshot().await;
+            respond(
+                200,
+                "application/json; charset=utf-8",
+                body.to_string().as_bytes(),
+            )
+        }
         ("GET", "/email/status") => {
             let instances = configured_instances().await;
             let body = json!({
@@ -52,6 +143,51 @@ pub async fn http_request(request: &Value) -> Value {
             br#"{"error":"not found"}"#,
         ),
     }
+}
+
+/// Render the same JSON-array shape that the daemon's legacy
+/// `render_email_health` produced. Each row carries the live
+/// state of one configured account. Returns `[]` when the plugin
+/// hasn't booted yet (runtime handle empty).
+async fn render_health_snapshot() -> Value {
+    let plugin = {
+        let guard = runtime_handle::runtime_handle().read().await;
+        guard.as_ref().cloned()
+    };
+    let Some(plugin) = plugin else {
+        return json!([]);
+    };
+    let Some(map) = plugin.health_map().await else {
+        return json!([]);
+    };
+    let mut keys: Vec<String> = map.iter().map(|e| e.key().clone()).collect();
+    keys.sort();
+    let mut rows = Vec::with_capacity(keys.len());
+    for k in keys {
+        if let Some(arc) = map.get(&k).map(|v| v.value().clone()) {
+            let h = arc.read().await;
+            rows.push(json!({
+                "instance": k,
+                "state": match h.state {
+                    crate::health::WorkerState::Connecting => "connecting",
+                    crate::health::WorkerState::Idle => "idle",
+                    crate::health::WorkerState::Polling => "polling",
+                    crate::health::WorkerState::Down => "down",
+                },
+                "last_idle_alive_ts": h.last_idle_alive_ts,
+                "last_poll_ts": h.last_poll_ts,
+                "last_connect_ok_ts": h.last_connect_ok_ts,
+                "consecutive_failures": h.consecutive_failures,
+                "messages_seen_total": h.messages_seen_total,
+                "last_error": h.last_error,
+                "outbound_queue_depth": h.outbound_queue_depth,
+                "outbound_dlq_depth": h.outbound_dlq_depth,
+                "outbound_sent_total": h.outbound_sent_total,
+                "outbound_failed_total": h.outbound_failed_total,
+            }));
+        }
+    }
+    Value::Array(rows)
 }
 
 fn respond(status: u16, content_type: &str, body: &[u8]) -> Value {
