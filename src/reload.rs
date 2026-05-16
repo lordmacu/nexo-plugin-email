@@ -92,9 +92,20 @@ mod tests {
     use crate::config::EmailPluginConfigFile;
 
     fn cfg(accounts_yaml: &str) -> EmailPluginConfig {
-        let yaml = format!("email:\n  accounts:\n{accounts_yaml}");
+        // 0.5.0: untagged Shape enum requires `accounts` to be an
+        // actual sequence (`[]` for empty), not a bare null. Older
+        // serde-yaml versions tolerated `accounts:\n` (which produces
+        // YAML null) against `Vec<EmailAccountConfig>`; the enum
+        // discrimination path doesn't, so emit a real empty list
+        // when the caller passes "".
+        let body = if accounts_yaml.is_empty() {
+            "    []\n".to_string()
+        } else {
+            accounts_yaml.to_string()
+        };
+        let yaml = format!("email:\n  accounts:\n{body}");
         let f: EmailPluginConfigFile = serde_yaml::from_str(&yaml).unwrap();
-        f.email
+        f.email.into_vec().into_iter().next().unwrap()
     }
 
     fn one(instance: &str) -> String {

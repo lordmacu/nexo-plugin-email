@@ -304,7 +304,7 @@ mod tests {
         let ctx = Arc::new(EmailToolContext {
             creds: Arc::new(EmailCredentialStore::empty()),
             google: Arc::new(GoogleCredentialStore::empty()),
-            config: Arc::new(f.email),
+            config: Arc::new(f.email.into_vec().into_iter().next().unwrap()),
             dispatcher: dispatcher.clone(),
             health: HealthMap::new(DashMap::new().into()),
             bounce_store: None,
@@ -401,7 +401,7 @@ mod tests {
         Arc::new(EmailToolContext {
             creds: Arc::new(EmailCredentialStore::empty()),
             google: Arc::new(GoogleCredentialStore::empty()),
-            config: Arc::new(f.email),
+            config: Arc::new(f.email.into_vec().into_iter().next().unwrap()),
             dispatcher,
             health: HealthMap::new(DashMap::new().into()),
             bounce_store: Some(bounce_store),

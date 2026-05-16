@@ -10,23 +10,32 @@ use serial_test::serial;
 fn parse_cfg(yaml: &str) -> EmailPluginConfig {
     let wrapper: nexo_plugin_email::config::EmailPluginConfigFile =
         serde_yaml::from_str(yaml).unwrap();
-    wrapper.email
+    // 0.5.0: top-level `email` is now `EmailPluginShape::{Single,Many}`.
+    wrapper.email.into_vec().into_iter().next().unwrap()
 }
 
 async fn list_handler() -> Vec<String> {
+    // 0.5.0: cell stores Vec<EmailPluginConfig>; flatten accounts.
     let guard = configured_state().read().await;
     guard
         .as_ref()
-        .map(|c| c.accounts.iter().map(|a| a.instance.clone()).collect())
+        .map(|vec| {
+            vec.iter()
+                .flat_map(|c| c.accounts.iter().map(|a| a.instance.clone()))
+                .collect()
+        })
         .unwrap_or_default()
 }
 
 async fn issue_handler(account_id: &str) -> Result<(), String> {
     let guard = configured_state().read().await;
-    let Some(cfg) = guard.as_ref() else {
+    let Some(vec) = guard.as_ref() else {
         return Err("not_found".to_string());
     };
-    if cfg.accounts.iter().any(|a| a.instance == account_id) {
+    if vec
+        .iter()
+        .any(|c| c.accounts.iter().any(|a| a.instance == account_id))
+    {
         Ok(())
     } else {
         Err("not_found".to_string())
@@ -35,12 +44,12 @@ async fn issue_handler(account_id: &str) -> Result<(), String> {
 
 async fn resolve_bytes_handler(account_id: &str) -> Result<Vec<u8>, String> {
     let guard = configured_state().read().await;
-    let Some(cfg) = guard.as_ref() else {
+    let Some(vec) = guard.as_ref() else {
         return Err("not_found".to_string());
     };
-    let acct = cfg
-        .accounts
+    let acct = vec
         .iter()
+        .flat_map(|c| c.accounts.iter())
         .find(|a| a.instance == account_id)
         .ok_or_else(|| "not_found".to_string())?;
     serde_json::to_vec(acct).map_err(|e| format!("serialize failed: {e}"))
@@ -98,7 +107,7 @@ email:
 #[tokio::test]
 #[serial]
 async fn list_returns_account_instance_names() {
-    *configured_state().write().await = Some(parse_cfg(FIXTURE));
+    *configured_state().write().await = Some(vec![parse_cfg(FIXTURE)]);
     let accounts = list_handler().await;
     assert_eq!(accounts.len(), 2);
     assert!(accounts.contains(&"primary".to_string()));
@@ -109,7 +118,7 @@ async fn list_returns_account_instance_names() {
 #[tokio::test]
 #[serial]
 async fn issue_accepts_known_instance() {
-    *configured_state().write().await = Some(parse_cfg(FIXTURE));
+    *configured_state().write().await = Some(vec![parse_cfg(FIXTURE)]);
     issue_handler("primary").await.expect("accepted");
     *configured_state().write().await = None;
 }
@@ -117,7 +126,7 @@ async fn issue_accepts_known_instance() {
 #[tokio::test]
 #[serial]
 async fn issue_rejects_unknown_instance() {
-    *configured_state().write().await = Some(parse_cfg(FIXTURE));
+    *configured_state().write().await = Some(vec![parse_cfg(FIXTURE)]);
     let err = issue_handler("ghost").await.expect_err("expected not_found");
     assert_eq!(err, "not_found");
     *configured_state().write().await = None;
@@ -136,7 +145,7 @@ async fn issue_rejects_when_no_configured_state() {
 #[tokio::test]
 #[serial]
 async fn resolve_bytes_returns_serde_json_encoded_account() {
-    *configured_state().write().await = Some(parse_cfg(FIXTURE));
+    *configured_state().write().await = Some(vec![parse_cfg(FIXTURE)]);
     let bytes = resolve_bytes_handler("primary").await.expect("resolve ok");
     let decoded: EmailAccountConfig = serde_json::from_slice(&bytes).expect("round-trip");
     assert_eq!(decoded.instance, "primary");

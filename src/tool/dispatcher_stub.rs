@@ -47,15 +47,17 @@ pub fn stub_ctx_with_bounce(
     force_err: bool,
     bounce_store: Option<Arc<crate::bounce_store::BounceStore>>,
 ) -> (Arc<EmailToolContext>, Arc<StubDispatcher>) {
-    let yaml = format!(
-        "email:\n  accounts:\n{}\n",
-        declared
+    let yaml = if declared.is_empty() {
+        "email:\n  accounts: []\n".to_string()
+    } else {
+        let body = declared
             .iter()
             .map(|i| format!(
                 "    - instance: {i}\n      address: {i}@example.com\n      imap: {{ host: imap.x, port: 993 }}\n      smtp: {{ host: smtp.x, port: 587 }}\n"
             ))
-            .collect::<String>()
-    );
+            .collect::<String>();
+        format!("email:\n  accounts:\n{body}")
+    };
     let f: EmailPluginConfigFile = serde_yaml::from_str(&yaml).unwrap();
     let dispatcher = Arc::new(StubDispatcher {
         instance_ids_list: declared.clone(),
@@ -66,7 +68,7 @@ pub fn stub_ctx_with_bounce(
     let ctx = Arc::new(EmailToolContext {
         creds: Arc::new(EmailCredentialStore::empty()),
         google: Arc::new(GoogleCredentialStore::empty()),
-        config: Arc::new(f.email),
+        config: Arc::new(f.email.into_vec().into_iter().next().unwrap()),
         dispatcher: dispatcher.clone(),
         health: HealthMap::new(DashMap::new().into()),
         bounce_store,
@@ -80,15 +82,17 @@ pub fn stub_ctx(
     declared: Vec<String>,
     force_err: bool,
 ) -> (Arc<EmailToolContext>, Arc<StubDispatcher>) {
-    let yaml = format!(
-        "email:\n  accounts:\n{}\n",
-        declared
+    let yaml = if declared.is_empty() {
+        "email:\n  accounts: []\n".to_string()
+    } else {
+        let body = declared
             .iter()
             .map(|i| format!(
                 "    - instance: {i}\n      address: {i}@example.com\n      imap: {{ host: imap.x, port: 993 }}\n      smtp: {{ host: smtp.x, port: 587 }}\n"
             ))
-            .collect::<String>()
-    );
+            .collect::<String>();
+        format!("email:\n  accounts:\n{body}")
+    };
     let f: EmailPluginConfigFile = serde_yaml::from_str(&yaml).unwrap();
     let dispatcher = Arc::new(StubDispatcher {
         instance_ids_list: declared.clone(),
@@ -99,7 +103,7 @@ pub fn stub_ctx(
     let ctx = Arc::new(EmailToolContext {
         creds: Arc::new(EmailCredentialStore::empty()),
         google: Arc::new(GoogleCredentialStore::empty()),
-        config: Arc::new(f.email),
+        config: Arc::new(f.email.into_vec().into_iter().next().unwrap()),
         dispatcher: dispatcher.clone(),
         health: HealthMap::new(DashMap::new().into()),
         bounce_store: None,

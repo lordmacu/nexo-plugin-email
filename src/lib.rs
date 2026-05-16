@@ -5,6 +5,8 @@
 //! loop-prevention, DSN handling and SPF/DKIM checks land in 48.2..48.10.
 
 pub mod attachment_store;
+pub mod auto_discovery;
+pub mod boot;
 pub mod bounce_store;
 pub mod config;
 pub mod configured_state;
@@ -15,6 +17,7 @@ pub mod events;
 pub mod health;
 pub mod imap_conn;
 pub mod inbound;
+pub mod instance_registry;
 pub mod loop_prevent;
 pub mod metrics;
 pub mod mime_build;
@@ -24,6 +27,7 @@ pub mod outbound_queue;
 pub mod plugin;
 pub mod provider_hint;
 pub mod reload;
+pub mod runtime_handle;
 pub mod smtp_conn;
 pub mod spf_dkim;
 pub mod subprocess_dispatch;
@@ -34,7 +38,7 @@ pub use attachment_store::AttachmentStore;
 pub use bounce_store::{BounceStore, RecipientStatus};
 pub use config::{
     EmailAccountConfig, EmailFilters, EmailFolders, EmailPluginConfig, EmailPluginConfigFile,
-    EmailProvider, ImapEndpoint, LoopPreventionCfg, SmtpEndpoint, TlsMode,
+    EmailPluginShape, EmailProvider, ImapEndpoint, LoopPreventionCfg, SmtpEndpoint, TlsMode,
 };
 pub use configured_state::configured_state;
 pub use cursor::{CursorStore, UidCursor};

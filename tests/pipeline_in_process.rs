@@ -34,7 +34,7 @@ fn cfg(declared: &[(&str, &str)]) -> nexo_plugin_email::EmailPluginConfig {
         ));
     }
     let f: EmailPluginConfigFile = serde_yaml::from_str(&yaml).unwrap();
-    f.email
+    f.email.into_vec().into_iter().next().unwrap()
 }
 
 fn empty_meta(from_address: &str) -> EmailMeta {

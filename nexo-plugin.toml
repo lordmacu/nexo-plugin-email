@@ -13,7 +13,7 @@
 
 [plugin]
 id = "email"
-version = "0.3.0"
+version = "0.5.0"
 name = "Email"
 description = "Email (IMAP/SMTP) channel for nexo agents — multi-account internal."
 min_nexo_version = ">=0.1.0"
@@ -21,13 +21,63 @@ min_nexo_version = ">=0.1.0"
 [plugin.requires]
 nexo_capabilities = ["broker"]
 
+# Phase 81.33.b.real Stages 2+4+5 — auto-discovery broker
+# handler subscribe allowlist. Defense-in-depth so the plugin
+# can only handle the topics it owns.
+[plugin.capabilities.broker]
+subscribe = [
+    "plugin.outbound.email",
+    "plugin.outbound.email.>",
+    "plugin.email.http.request",
+    "plugin.email.admin.>",
+    "plugin.email.metrics.scrape",
+]
+publish   = ["plugin.inbound.email", "plugin.inbound.email.>"]
+
+# Phase 81.33.b.real Stage 2 — daemon mounts HTTP proxy under
+# `/email`. Forwards requests via broker JSON-RPC. The plugin
+# owns its internal router (see `src/auto_discovery.rs::http_request`).
+[plugin.http]
+mount_prefix    = "/email"
+timeout_seconds = 30
+
+# Phase 81.33.b.real Stage 4 — admin RPC commands forwarded via
+# broker. Daemon receives `nexo/admin/email/<verb>` + forwards
+# to `plugin.email.admin.<verb>`.
+[plugin.admin]
+method_prefix       = "nexo/admin/email/"
+broker_topic_prefix = "plugin.email.admin"
+timeout_seconds     = 15
+
+# Phase 81.33.b.real Stage 5 — Prometheus metrics scrape via
+# broker. Replaces the legacy in-process direct call from the
+# daemon's `run_metrics_server` to
+# `nexo_plugin_email::metrics::render_prometheus`.
+[plugin.metrics]
+prometheus          = true
+broker_topic_prefix = "plugin.email"
+timeout_seconds     = 5
+
+# Phase 81.33.b.real Stage 6 — setup wizard dashboard surface.
+# 0.5.0: email is multi-tenant; the wizard walks per-tenant subdirs
+# of the workspace and probes per-account password files inside.
+# Legacy 0.4.x single-map YAML still works via the back-compat
+# shim — those operators see one synthetic `default` tenant.
+[plugin.dashboard.layout]
+kind = "workspace_walk"
+subdir = "email"
+
+[plugin.dashboard.auth_check]
+kind = "session_dir_files"
+candidates = ["email_password.txt", ".nexo-paired"]
+
 # Phase 93.4.c — declarative config contract. Daemon delivers
 # operator YAML at `cfg.plugins.entries.email` (Phase 93.3) via
 # `plugin.configure` JSON-RPC (Phase 93.2); SDK `on_configure`
 # handler deserialises into `EmailPluginConfig` (single-instance
 # shape, no Vec wrapper).
 [plugin.config_schema]
-shape = "object"
+shape = "array"
 schema = '''{
   "type": "object",
   "properties": {
@@ -42,6 +92,8 @@ schema = '''{
     "poll_fallback_seconds":     { "type": "integer" },
     "idle_reissue_minutes":      { "type": "integer" },
     "spf_dkim_warn":             { "type": "boolean" },
+    "instance":                  { "type": "string" },
+    "allow_agents":              { "type": "array" },
     "loop_prevention": {
       "type": "object",
       "properties": {

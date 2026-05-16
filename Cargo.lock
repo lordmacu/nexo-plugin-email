@@ -2842,7 +2842,7 @@ dependencies = [
 
 [[package]]
 name = "nexo-microapp-sdk"
-version = "0.1.16"
+version = "0.1.17"
 dependencies = [
  "async-trait",
  "base64 0.22.1",
@@ -2876,6 +2876,8 @@ dependencies = [
  "hex",
  "hmac",
  "image",
+ "nexo-broker",
+ "nexo-plugin-manifest",
  "qrcode",
  "rand 0.8.6",
  "serde",
@@ -2890,7 +2892,7 @@ dependencies = [
 
 [[package]]
 name = "nexo-plugin-email"
-version = "0.3.0"
+version = "0.5.0"
 dependencies = [
  "anyhow",
  "async-imap",
@@ -2942,7 +2944,7 @@ dependencies = [
 
 [[package]]
 name = "nexo-plugin-manifest"
-version = "0.1.4"
+version = "0.1.5"
 dependencies = [
  "anyhow",
  "regex",
