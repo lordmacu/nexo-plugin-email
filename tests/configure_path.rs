@@ -46,14 +46,17 @@ async fn configure_unknown_field_errors() {
 #[serial]
 async fn configure_overwrites_on_hot_reload_recall() {
     let cfg_a = parse_yaml("attachments_dir: /tmp/a\n");
-    *configured_state().write().await = Some(cfg_a);
+    *configured_state().write().await = Some(vec![cfg_a]);
 
     let cfg_b = parse_yaml("attachments_dir: /tmp/b\n");
-    *configured_state().write().await = Some(cfg_b);
+    *configured_state().write().await = Some(vec![cfg_b]);
 
     let guard = configured_state().read().await;
     let current = guard.as_ref().expect("state populated");
-    assert_eq!(current.attachments_dir, "/tmp/b");
+    assert_eq!(
+        current.first().expect("non-empty").attachments_dir,
+        "/tmp/b"
+    );
     drop(guard);
     *configured_state().write().await = None;
 }
@@ -71,16 +74,31 @@ async fn configure_loop_prevention_defaults_apply() {
 
 #[tokio::test]
 #[serial]
-async fn configured_state_holds_single_instance_not_vec() {
-    // Email differs from telegram/whatsapp: single instance ⇒
-    // bare struct in the cell rather than Vec<_>. This contract
-    // pins that shape for future-me.
+async fn configured_state_holds_vec_of_tenants() {
+    // 0.5.0: cell holds Vec<EmailPluginConfig>. Single-tenant
+    // back-compat populates a 1-element vec; the test pins that
+    // contract.
     let cfg = parse_yaml("max_body_bytes: 2048\n");
-    *configured_state().write().await = Some(cfg);
+    *configured_state().write().await = Some(vec![cfg]);
     let guard = configured_state().read().await;
     let inner = guard.as_ref().expect("populated");
-    // Type-check at compile time via direct field access.
-    assert_eq!(inner.max_body_bytes, 2048);
+    assert_eq!(inner.len(), 1);
+    assert_eq!(inner[0].max_body_bytes, 2048);
+    drop(guard);
+    *configured_state().write().await = None;
+}
+
+#[tokio::test]
+#[serial]
+async fn configured_state_holds_multi_tenant() {
+    let a = parse_yaml("instance: tenant_a\nmax_body_bytes: 1024\n");
+    let b = parse_yaml("instance: tenant_b\nmax_body_bytes: 2048\n");
+    *configured_state().write().await = Some(vec![a, b]);
+    let guard = configured_state().read().await;
+    let inner = guard.as_ref().expect("populated");
+    assert_eq!(inner.len(), 2);
+    assert_eq!(inner[0].instance.as_deref(), Some("tenant_a"));
+    assert_eq!(inner[1].instance.as_deref(), Some("tenant_b"));
     drop(guard);
     *configured_state().write().await = None;
 }

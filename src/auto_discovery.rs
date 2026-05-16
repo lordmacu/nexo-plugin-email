@@ -115,10 +115,15 @@ pub async fn metrics_scrape(_request: &Value) -> Value {
 // ── helpers ────────────────────────────────────────────────────
 
 async fn configured_instances() -> Vec<String> {
+    // 0.5.0: flatten account labels across every configured tenant.
     let guard = configured_state().read().await;
     guard
         .as_ref()
-        .map(|cfg| cfg.accounts.iter().map(|a| a.instance.clone()).collect())
+        .map(|vec| {
+            vec.iter()
+                .flat_map(|c| c.accounts.iter().map(|a| a.instance.clone()))
+                .collect()
+        })
         .unwrap_or_default()
 }
 

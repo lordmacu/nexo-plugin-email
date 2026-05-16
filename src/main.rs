@@ -138,10 +138,15 @@ async fn main() -> anyhow::Result<()> {
         // instance shape per manifest `[plugin.config_schema]
         // shape = "object"`.
         .on_configure(|value: serde_yaml::Value| async move {
-            let parsed: nexo_plugin_email::config::EmailPluginConfig =
+            // 0.5.0: accept both the legacy bare-map shape and the
+            // multi-tenant sequence via the untagged Shape enum.
+            // configured_state stores Vec<EmailPluginConfig>; the
+            // legacy reader picks the first entry.
+            let shape: nexo_plugin_email::config::EmailPluginShape =
                 serde_yaml::from_value(value)
                     .map_err(|e| format!("invalid email config: {e}"))?;
-            *nexo_plugin_email::configured_state().write().await = Some(parsed);
+            *nexo_plugin_email::configured_state().write().await =
+                Some(shape.into_vec());
             Ok(())
         })
         // Phase 93.8.c — credential store contribution. Daemon's
@@ -149,10 +154,15 @@ async fn main() -> anyhow::Result<()> {
         // handlers (per `[plugin.credentials_schema]`). Accounts
         // map to `EmailPluginConfig.accounts[*].instance`.
         .on_credentials_list(|| async move {
+            // 0.5.0: flatten accounts across every configured tenant.
             let guard = nexo_plugin_email::configured_state().read().await;
             let accounts: Vec<String> = guard
                 .as_ref()
-                .map(|c| c.accounts.iter().map(|a| a.instance.clone()).collect())
+                .map(|vec| {
+                    vec.iter()
+                        .flat_map(|c| c.accounts.iter().map(|a| a.instance.clone()))
+                        .collect()
+                })
                 .unwrap_or_default();
             Ok(nexo_microapp_sdk::plugin::CredentialsListReply {
                 accounts,
@@ -161,10 +171,13 @@ async fn main() -> anyhow::Result<()> {
         })
         .on_credentials_issue(|account_id: String, _agent_id: String| async move {
             let guard = nexo_plugin_email::configured_state().read().await;
-            let Some(cfg) = guard.as_ref() else {
+            let Some(vec) = guard.as_ref() else {
                 return Err("not_found".to_string());
             };
-            if cfg.accounts.iter().any(|a| a.instance == account_id) {
+            if vec
+                .iter()
+                .any(|c| c.accounts.iter().any(|a| a.instance == account_id))
+            {
                 Ok(())
             } else {
                 Err("not_found".to_string())
@@ -173,12 +186,12 @@ async fn main() -> anyhow::Result<()> {
         .on_credentials_resolve_bytes(
             |account_id: String, _agent_id: String, _fingerprint: String| async move {
                 let guard = nexo_plugin_email::configured_state().read().await;
-                let Some(cfg) = guard.as_ref() else {
+                let Some(vec) = guard.as_ref() else {
                     return Err("not_found".to_string());
                 };
-                let acct = cfg
-                    .accounts
+                let acct = vec
                     .iter()
+                    .flat_map(|c| c.accounts.iter())
                     .find(|a| a.instance == account_id)
                     .ok_or_else(|| "not_found".to_string())?;
                 serde_json::to_vec(acct).map_err(|e| format!("serialize failed: {e}"))
