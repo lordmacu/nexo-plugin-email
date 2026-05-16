@@ -120,7 +120,21 @@ fn load_email_yaml(path: &Path) -> Result<EmailPluginConfig, EnvConfigError> {
             path: path.to_path_buf(),
             source,
         })?;
-    Ok(file.email)
+    // 0.5.0: top-level `email` is `EmailPluginShape`. Pick the
+    // first entry — the env-var bootstrap path is single-instance
+    // by construction (the daemon would seed per-instance env vars
+    // when multi-tenant is wired daemon-side).
+    Ok(file
+        .email
+        .into_vec()
+        .into_iter()
+        .next()
+        .ok_or_else(|| EnvConfigError::ParseConfig {
+            path: path.to_path_buf(),
+            source: serde::de::Error::custom(
+                "email plugin config has no entries (empty sequence)",
+            ),
+        })?)
 }
 
 fn build_email_store(

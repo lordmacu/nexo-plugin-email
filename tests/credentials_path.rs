@@ -10,7 +10,8 @@ use serial_test::serial;
 fn parse_cfg(yaml: &str) -> EmailPluginConfig {
     let wrapper: nexo_plugin_email::config::EmailPluginConfigFile =
         serde_yaml::from_str(yaml).unwrap();
-    wrapper.email
+    // 0.5.0: top-level `email` is now `EmailPluginShape::{Single,Many}`.
+    wrapper.email.into_vec().into_iter().next().unwrap()
 }
 
 async fn list_handler() -> Vec<String> {

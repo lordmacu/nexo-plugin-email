@@ -36,7 +36,7 @@ pub use attachment_store::AttachmentStore;
 pub use bounce_store::{BounceStore, RecipientStatus};
 pub use config::{
     EmailAccountConfig, EmailFilters, EmailFolders, EmailPluginConfig, EmailPluginConfigFile,
-    EmailProvider, ImapEndpoint, LoopPreventionCfg, SmtpEndpoint, TlsMode,
+    EmailPluginShape, EmailProvider, ImapEndpoint, LoopPreventionCfg, SmtpEndpoint, TlsMode,
 };
 pub use configured_state::configured_state;
 pub use cursor::{CursorStore, UidCursor};

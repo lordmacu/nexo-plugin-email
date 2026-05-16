@@ -11,15 +11,57 @@
 
 use serde::{Deserialize, Serialize};
 
+/// Operator YAML wire shape. The top-level `email:` key accepts
+/// either a single map (legacy 0.4.x single-instance multi-account)
+/// or a sequence of maps (0.5.0+ multi-tenant, each entry hosting
+/// its own `accounts: Vec<EmailAccountConfig>`).
 #[derive(Debug, Deserialize, Serialize, Clone)]
 #[serde(deny_unknown_fields)]
 pub struct EmailPluginConfigFile {
-    pub email: EmailPluginConfig,
+    pub email: EmailPluginShape,
+}
+
+/// 0.4.x back-compat alias. Existing tests + downstream callers
+/// keep using this name; the wrapper above already takes a Shape.
+pub type EmailPluginConfigFileLegacy = EmailPluginConfigFile;
+
+#[allow(clippy::large_enum_variant)]
+#[derive(Debug, Deserialize, Serialize, Clone)]
+#[serde(untagged)]
+pub enum EmailPluginShape {
+    /// 0.4.x legacy bare map. Normalises to a 1-element vec with
+    /// `instance: None` (resolved to `"default"` at boot time).
+    Single(EmailPluginConfig),
+    /// 0.5.0+ multi-tenant sequence. Each entry hosts its own
+    /// `accounts` slice and owns isolated state.
+    Many(Vec<EmailPluginConfig>),
+}
+
+impl EmailPluginShape {
+    /// Flatten to the canonical `Vec<EmailPluginConfig>` the boot
+    /// loop consumes. Single-map shape produces a 1-element vec so
+    /// downstream code is shape-agnostic.
+    pub fn into_vec(self) -> Vec<EmailPluginConfig> {
+        match self {
+            Self::Single(c) => vec![c],
+            Self::Many(v) => v,
+        }
+    }
 }
 
 #[derive(Debug, Deserialize, Serialize, Clone)]
 #[serde(deny_unknown_fields)]
 pub struct EmailPluginConfig {
+    /// Tenant label. `None` ⇒ legacy single-instance behaviour
+    /// (resolved to `"default"` at boot time). NOT the same
+    /// namespace as `EmailAccountConfig.instance` (which is the
+    /// per-account label inside this tenant).
+    #[serde(default)]
+    pub instance: Option<String>,
+    /// Agents permitted to route email tools to this tenant.
+    /// Empty = accept any agent (back-compat with 0.4.x).
+    #[serde(default)]
+    pub allow_agents: Vec<String>,
     #[serde(default = "default_email_enabled")]
     pub enabled: bool,
     #[serde(default = "default_max_body_bytes")]

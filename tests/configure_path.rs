@@ -1,13 +1,20 @@
 //! Phase 93.4.c — coverage for the configure(value) hook +
 //! configured_state singleton.
 
-use nexo_plugin_email::config::EmailPluginConfig;
+use nexo_plugin_email::config::{EmailPluginConfig, EmailPluginShape};
 use nexo_plugin_email::configured_state;
 use serial_test::serial;
 
 fn parse_yaml(s: &str) -> EmailPluginConfig {
+    // 0.5.0: configure payload is an EmailPluginShape; the legacy
+    // 0.4.x bare-map YAML still parses as Shape::Single.
     let value: serde_yaml::Value = serde_yaml::from_str(s).expect("yaml parses");
-    serde_yaml::from_value(value).expect("config deserialises")
+    let shape: EmailPluginShape = serde_yaml::from_value(value).expect("shape deserialises");
+    shape
+        .into_vec()
+        .into_iter()
+        .next()
+        .expect("at least one entry")
 }
 
 #[tokio::test]
