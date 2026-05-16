@@ -137,41 +137,11 @@ pub struct EmailAccountConfig {
     pub bootstrap_limit: Option<u32>,
 }
 
-#[derive(Debug, Deserialize, Serialize, Clone, Copy, PartialEq, Eq)]
-#[serde(rename_all = "snake_case")]
-pub enum EmailProvider {
-    Gmail,
-    Outlook,
-    Yahoo,
-    Icloud,
-    Custom,
-}
-
-#[derive(Debug, Deserialize, Serialize, Clone)]
-#[serde(deny_unknown_fields)]
-pub struct ImapEndpoint {
-    pub host: String,
-    pub port: u16,
-    #[serde(default = "default_imap_tls")]
-    pub tls: TlsMode,
-}
-
-#[derive(Debug, Deserialize, Serialize, Clone)]
-#[serde(deny_unknown_fields)]
-pub struct SmtpEndpoint {
-    pub host: String,
-    pub port: u16,
-    #[serde(default = "default_smtp_tls")]
-    pub tls: TlsMode,
-}
-
-#[derive(Debug, Deserialize, Serialize, Clone, Copy, PartialEq, Eq)]
-#[serde(rename_all = "snake_case")]
-pub enum TlsMode {
-    Plain,
-    Starttls,
-    ImplicitTls,
-}
+// Phase 81.20.x F0 — `TlsMode`, `EmailProvider`, `ImapEndpoint`,
+// `SmtpEndpoint` migrated to `nexo-email-probe`. Re-exported here
+// so existing `crate::config::*` consumers (plugin + setup wizard
+// + downstream tests) keep compiling unchanged.
+pub use nexo_email_probe::types::{EmailProvider, ImapEndpoint, SmtpEndpoint, TlsMode};
 
 #[derive(Debug, Deserialize, Serialize, Clone)]
 #[serde(deny_unknown_fields)]
@@ -241,12 +211,6 @@ fn default_spf_dkim_warn() -> bool {
 }
 fn default_provider() -> EmailProvider {
     EmailProvider::Custom
-}
-fn default_imap_tls() -> TlsMode {
-    TlsMode::ImplicitTls
-}
-fn default_smtp_tls() -> TlsMode {
-    TlsMode::Starttls
 }
 fn default_folder_inbox() -> String {
     "INBOX".to_string()

@@ -15,7 +15,6 @@ pub mod dsn;
 pub mod env_config;
 pub mod events;
 pub mod health;
-pub mod imap_conn;
 pub mod inbound;
 pub mod instance_registry;
 pub mod loop_prevent;
@@ -25,14 +24,21 @@ pub mod mime_parse;
 pub mod outbound;
 pub mod outbound_queue;
 pub mod plugin;
-pub mod provider_hint;
 pub mod reload;
 pub mod runtime_handle;
-pub mod smtp_conn;
-pub mod spf_dkim;
 pub mod subprocess_dispatch;
 pub mod threading;
 pub mod tool;
+
+// Phase 81.20.x F0 — IMAP/SMTP probe + provider hints + SPF/DKIM
+// alignment check extracted to `nexo-email-probe`. Re-export the
+// modules so existing `crate::imap_conn::*` / `crate::smtp_conn::*`
+// / `crate::provider_hint::*` / `crate::spf_dkim::*` callers
+// inside this plugin keep compiling unchanged.
+pub use nexo_email_probe::imap_conn;
+pub use nexo_email_probe::provider_hint;
+pub use nexo_email_probe::smtp_conn;
+pub use nexo_email_probe::spf_dkim;
 
 pub use attachment_store::AttachmentStore;
 pub use bounce_store::{BounceStore, RecipientStatus};
@@ -52,10 +58,20 @@ pub use mime_parse::{parse_eml, ParseConfig, ParsedMessage};
 pub use outbound::OutboundDispatcher;
 pub use outbound_queue::{OutboundJob, OutboundQueue, SmtpEnvelope};
 pub use plugin::{EmailPlugin, TOPIC_INBOUND, TOPIC_OUTBOUND};
-pub use provider_hint::{provider_hint, ProviderHint};
+// Phase 81.20.x F0 — `SmtpClient`, `check_alignment`, et al. now
+// live in `nexo-email-probe`. The crate-level `pub use` re-exports
+// of `imap_conn` / `smtp_conn` / `provider_hint` / `spf_dkim`
+// modules above already expose them under the same paths. The
+// function `provider_hint::provider_hint` collides at the root
+// with the module re-export, so it stays reachable only as
+// `crate::provider_hint::provider_hint` (callers using the bare
+// function name should `use nexo_plugin_email::provider_hint::provider_hint`
+// or migrate to `nexo_email_probe` directly).
+pub use nexo_email_probe::{
+    check_alignment, decide_warns, parse_spf_includes, AlignmentReport, ProviderHint, SmtpClient,
+    SmtpSendOutcome,
+};
 pub use reload::{compute_account_diff, AccountDiff};
-pub use smtp_conn::{SmtpClient, SmtpSendOutcome};
-pub use spf_dkim::{check_alignment, decide_warns, parse_spf_includes, AlignmentReport};
 pub use subprocess_dispatch::{dispatch_email_tool, email_tool_defs};
 pub use threading::{
     canonicalize_message_id, enrich_reply_threading, is_self_thread, resolve_thread_root,

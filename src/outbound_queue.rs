@@ -27,15 +27,11 @@ use tokio::fs::{File, OpenOptions};
 use tokio::io::{AsyncBufReadExt, AsyncWriteExt, BufReader};
 use tokio::sync::Mutex;
 
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
-pub struct SmtpEnvelope {
-    pub from: String,
-    pub to: Vec<String>,
-    #[serde(default)]
-    pub cc: Vec<String>,
-    #[serde(default)]
-    pub bcc: Vec<String>,
-}
+// Phase 81.20.x F0 — `SmtpEnvelope` migrated to `nexo-email-probe`.
+// Re-exported here so existing `crate::outbound_queue::SmtpEnvelope`
+// consumers (outbound.rs, MIME builders, persisted queue) keep
+// compiling against the same path.
+pub use nexo_email_probe::types::SmtpEnvelope;
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 pub struct OutboundJob {

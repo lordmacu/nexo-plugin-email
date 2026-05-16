@@ -122,6 +122,12 @@ nexo-auth            = { version = "0.1.5",  path = "../proyecto/crates/auth" }
 nexo-resilience      = { version = "0.1.1",  path = "../proyecto/crates/resilience" }
 nexo-plugin-manifest = { version = "0.1.5",  path = "../proyecto/crates/plugin-manifest" }
 
+# Phase 81.20.x F0 — IMAP/SMTP probe + provider hints + SPF/DKIM
+# extracted to a standalone crate so the setup wizard can validate
+# email credentials without depending on the full plugin crate.
+# Plugin re-exports the same surface for in-tree consumers.
+nexo-email-probe     = { version = "0.1.0", path = "../nexo-email-probe" }
+
 [dev-dependencies]
 serde_yaml  = "0.9"
 tempfile    = "3"
