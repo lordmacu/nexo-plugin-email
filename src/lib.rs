@@ -16,6 +16,7 @@ pub mod events;
 pub mod health;
 pub mod imap_conn;
 pub mod inbound;
+pub mod instance_registry;
 pub mod loop_prevent;
 pub mod metrics;
 pub mod mime_build;
