@@ -59,14 +59,17 @@ broker_topic_prefix = "plugin.email"
 timeout_seconds     = 5
 
 # Phase 81.33.b.real Stage 6 — setup wizard dashboard surface.
-# Email is single-instance (multi-account internal); auth state
-# probed via the presence of `secrets/email_password.txt`.
+# 0.5.0: email is multi-tenant; the wizard walks per-tenant subdirs
+# of the workspace and probes per-account password files inside.
+# Legacy 0.4.x single-map YAML still works via the back-compat
+# shim — those operators see one synthetic `default` tenant.
 [plugin.dashboard.layout]
-kind = "single"
+kind = "workspace_walk"
+subdir = "email"
 
 [plugin.dashboard.auth_check]
-kind = "file_presence"
-path = "email_password.txt"
+kind = "session_dir_files"
+candidates = ["email_password.txt", ".nexo-paired"]
 
 # Phase 93.4.c — declarative config contract. Daemon delivers
 # operator YAML at `cfg.plugins.entries.email` (Phase 93.3) via
@@ -74,7 +77,7 @@ path = "email_password.txt"
 # handler deserialises into `EmailPluginConfig` (single-instance
 # shape, no Vec wrapper).
 [plugin.config_schema]
-shape = "object"
+shape = "array"
 schema = '''{
   "type": "object",
   "properties": {
@@ -89,6 +92,8 @@ schema = '''{
     "poll_fallback_seconds":     { "type": "integer" },
     "idle_reissue_minutes":      { "type": "integer" },
     "spf_dkim_warn":             { "type": "boolean" },
+    "instance":                  { "type": "string" },
+    "allow_agents":              { "type": "array" },
     "loop_prevention": {
       "type": "object",
       "properties": {
