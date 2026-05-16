@@ -2,6 +2,94 @@
 
 All notable changes to `nexo-plugin-email` are documented here.
 
+## [0.5.0] — 2026-05-16
+
+Multi-tenant release. Operators can declare N tenants in their
+YAML, each owning isolated accounts + per-tenant state stores
+(`<data_dir>/email/<tenant>/`). Legacy 0.4.x single-map YAML keeps
+working via a back-compat shim that resolves to a one-element vec
+with `instance: "default"`.
+
+### Breaking
+
+- **Multi-tenant config shape.** `[plugin.config_schema] shape:
+  "object"` → `"array"`. `EmailPluginConfigFile.email` now holds
+  `EmailPluginShape::{Single, Many}` (untagged enum); both shapes
+  normalise via `into_vec()`.
+- **`EmailPluginConfig` gains:**
+    - `instance: Option<String>` — tenant label (None ⇒ "default").
+      Distinct namespace from `EmailAccountConfig.instance` (the
+      per-account label inside this tenant).
+    - `allow_agents: Vec<String>` — agents permitted to route
+      email tools to this tenant. Empty = accept any.
+- **`configured_state` stores `Option<Vec<EmailPluginConfig>>`** so
+  multi-tenant readers walk all tenants. Single-tenant back-compat
+  populates a 1-element vec.
+- **Dashboard surface** flipped from `single` / `file_presence` to
+  `workspace_walk subdir = "email"` / `session_dir_files`
+  candidates including the legacy `email_password.txt` and the
+  Chrome-style `.nexo-paired` sentinel.
+
+### Added
+
+- **`instance_registry`** — `OnceLock<Arc<DashMap<String,
+  Arc<EmailPlugin>>>>` mirroring browser / telegram / whatsapp
+  plugins. Tenant declarations register an `Arc<EmailPlugin>` per
+  entry.
+- **`boot::apply_configure`** — JSON-RPC `plugin.configure` boot
+  loop. Sanitises tenant labels (lowercase ASCII
+  `[A-Za-z0-9_-]{1,64}`, rejects path-traversal / unicode / empty),
+  resolves per-tenant `data_dir = <base>/email/<tenant>/`, diffs vs
+  prior registry, registers via a caller-supplied factory closure
+  (tests pass empty credential stores; daemon production wraps the
+  real stores).
+- **`admin RPC list_tenants`** — new verb returning per-tenant rows
+  with `accounts_count`, `registered`, and `allow_agents`. Legacy
+  `list_instances` (flat account list) retained for 0.4.x admin UI
+  back-compat.
+- **Manifest auto-discovery sections** updated: `config_schema.shape`
+  bumped, `dashboard.layout` swapped, `auth_check.candidates`
+  expanded, `instance` + `allow_agents` added to the JSON Schema.
+
+### Tests
+
+- `tests/configure_boot.rs` (8) — boot loop: register-two,
+  diff-aware reload, dup rejection, invalid label rejection,
+  label case-normalisation, single-shape back-compat preserves
+  empty registry, default fallback, helper API.
+- `tests/manifest_parse.rs` (4) — shape=array, workspace_walk
+  subdir, session_dir_files candidates, broker allowlist.
+- `tests/e2e_multi_instance.rs` (3) — JSON-RPC wire: 2-tenant
+  array accepted, legacy single-map still works, unknown field
+  rejected.
+- Inline: 2 new admin tests in `auto_discovery::tests`.
+- Total: 275/275 nextest green.
+
+### Backward compatibility
+
+- Legacy bare-map YAML keeps working via the Single shape.
+- `list_instances` admin verb retained.
+- Internal `EmailAccountConfig.instance` (account label) kept
+  intact — only the new `EmailPluginConfig.instance` (tenant label)
+  is added on top.
+
+### Deferred follow-ups
+
+- **Daemon-side subprocess flip.** Daemon currently spawns email
+  in-process via the `email_arc.clone()` factory. Wave 2 will swap
+  to `register_instance_subprocess_factories("email", ...)` so
+  each tenant gets its own subprocess (real cross-tenant process
+  isolation). This release ships the plugin-side contract; the
+  daemon update is a separate `proyecto` PR.
+- **Per-instance metrics labels.** Existing `email_*` counters
+  expose `instance` (account-level). Adding a tenant dimension
+  touches every event-site; deferred so observability stays
+  incremental.
+- **`seed_email_subprocess_env_for(&cfg)`.** Daemon helper is
+  currently `#[cfg(test)]`-only for the legacy single-instance
+  model. Wave 2 promotes it to production + adds per-tenant env
+  stamping.
+
 ## [0.3.0] — 2026-05-15
 
 ### Added
