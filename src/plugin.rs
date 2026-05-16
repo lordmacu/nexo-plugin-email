@@ -154,6 +154,42 @@ impl EmailPlugin {
         &self.cfg
     }
 
+    /// 0.5.1 — public accessor used by the subprocess tool dispatcher
+    /// to build an `EmailToolContext` per `tool.invoke` round-trip.
+    pub fn creds(&self) -> Arc<EmailCredentialStore> {
+        self.creds.clone()
+    }
+
+    /// 0.5.1 — public accessor for the Gmail OAuth store.
+    pub fn google(&self) -> Arc<GoogleCredentialStore> {
+        self.google.clone()
+    }
+
+    /// 0.5.1 — assemble an `EmailToolContext` from this plugin's
+    /// state. Used by subprocess tool dispatch (W3-C) to thread the
+    /// existing per-tool handlers (`tool/*.rs`) through the JSON-RPC
+    /// wire. Returns `None` when the plugin hasn't booted enough
+    /// state yet (dispatcher / health not primed).
+    pub async fn build_tool_context(
+        self: &Arc<Self>,
+    ) -> Option<Arc<crate::tool::EmailToolContext>> {
+        let dispatcher = self.dispatcher_handle().await?;
+        let health = self
+            .health_map()
+            .await
+            .unwrap_or_else(crate::inbound::HealthMap::default);
+        Some(Arc::new(crate::tool::EmailToolContext {
+            creds: self.creds(),
+            google: self.google(),
+            config: Arc::clone(&self.cfg),
+            dispatcher,
+            health,
+            bounce_store: self.bounce_store_handle(),
+            attachment_store: self.attachment_store_handle(),
+            attachments_dir: self.attachments_dir(),
+        }))
+    }
+
     /// Phase 48 follow-up #5 — surgical hot-reload entry point.
     /// Computes the diff between the plugin's *current* config and
     /// `new_cfg`, then teardown / respawn / spawn one worker pair
@@ -725,7 +761,7 @@ email:
     fn manifest_parses_and_id_is_email() {
         let m: PluginManifest = toml::from_str(MANIFEST_TOML).unwrap();
         assert_eq!(m.plugin.id, "email");
-        assert_eq!(m.plugin.version.to_string(), "0.5.0");
+        assert_eq!(m.plugin.version.to_string(), "0.5.1");
         assert_eq!(
             m.plugin.requires.nexo_capabilities,
             vec!["broker".to_string()]
@@ -740,7 +776,7 @@ email:
         let plugin = test_email_plugin();
         let nexo: &dyn NexoPlugin = &plugin;
         assert_eq!(nexo.manifest().plugin.id, "email");
-        assert_eq!(nexo.manifest().plugin.version.to_string(), "0.5.0");
+        assert_eq!(nexo.manifest().plugin.version.to_string(), "0.5.1");
     }
 
     #[test]

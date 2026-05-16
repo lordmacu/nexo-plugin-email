@@ -120,9 +120,13 @@ fn initialize_reply_carries_manifest_and_zero_tools() {
         .and_then(|v| v.as_array())
         .map(|a| a.len())
         .unwrap_or(0);
+    // 0.5.1 / Wave 3 — subprocess now advertises the 12 `email_*`
+    // tools so daemon-side `RemoteToolHandler` can route tool.invoke
+    // through the broker per tenant. Previously this asserted 0 per
+    // Phase 81.19.b; the dispatch port flips that contract.
     assert_eq!(
-        tools_count, 0,
-        "subprocess must advertise zero tools in 81.19.b (see subprocess_dispatch.rs docs)"
+        tools_count, 12,
+        "subprocess must advertise 12 email_* tools after Wave 3 dispatch port"
     );
 
     // Cleanup — kill the child to avoid orphan workers.
@@ -149,6 +153,9 @@ fn tool_invoke_for_unknown_name_returns_not_found() {
         json!({"jsonrpc": "2.0", "id": 1, "method": "initialize", "params": {}}),
     );
 
+    // 0.5.1 / Wave 3 — `email_send` is now a real tool. Use a
+    // truly-unknown name to verify the NotFound path still fires
+    // for anything outside the 12 advertised tools.
     let reply = rpc_round_trip(
         &mut stdin,
         &mut stdout,
@@ -158,7 +165,7 @@ fn tool_invoke_for_unknown_name_returns_not_found() {
             "method": "tool.invoke",
             "params": {
                 "plugin_id": "email",
-                "tool_name": "email_send",
+                "tool_name": "email_does_not_exist_zzz",
                 "args": {}
             }
         }),

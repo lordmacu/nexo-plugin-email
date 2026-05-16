@@ -2892,7 +2892,7 @@ dependencies = [
 
 [[package]]
 name = "nexo-plugin-email"
-version = "0.5.0"
+version = "0.5.1"
 dependencies = [
  "anyhow",
  "async-imap",
@@ -3019,7 +3019,7 @@ dependencies = [
 
 [[package]]
 name = "nexo-tool-meta"
-version = "0.1.14"
+version = "0.1.15"
 dependencies = [
  "base64 0.22.1",
  "chrono",
