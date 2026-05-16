@@ -6,6 +6,7 @@
 
 pub mod attachment_store;
 pub mod auto_discovery;
+pub mod boot;
 pub mod bounce_store;
 pub mod config;
 pub mod configured_state;
