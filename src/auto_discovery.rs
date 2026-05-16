@@ -82,8 +82,39 @@ pub async fn admin_handle(request: &Value) -> Value {
             })
         }
         "nexo/admin/email/list_instances" => {
+            // Legacy verb — flattens account-instances across every
+            // tenant. Kept for back-compat with 0.4.x admin UI.
             let instances = configured_instances().await;
             json!({ "ok": true, "result": { "instances": instances } })
+        }
+        "nexo/admin/email/list_tenants" => {
+            // 0.5.0: tenant-level enumeration with per-tenant account
+            // counts + paired-status proxy (whether accounts are
+            // declared at all). Sourced from configured_state +
+            // instance_registry.
+            let guard = crate::configured_state().read().await;
+            let tenants: Vec<Value> = guard
+                .as_ref()
+                .map(|vec| {
+                    vec.iter()
+                        .map(|cfg| {
+                            let label = cfg
+                                .instance
+                                .clone()
+                                .unwrap_or_else(|| "default".into());
+                            let registered =
+                                crate::instance_registry::lookup(&label).is_some();
+                            json!({
+                                "tenant": label,
+                                "accounts_count": cfg.accounts.len(),
+                                "registered": registered,
+                                "allow_agents": cfg.allow_agents,
+                            })
+                        })
+                        .collect()
+                })
+                .unwrap_or_default();
+            json!({ "ok": true, "result": { "tenants": tenants } })
         }
         other => json!({
             "ok": false,
@@ -199,5 +230,57 @@ mod tests {
         // always includes the HELP/TYPE lines for at least one
         // series.
         assert!(text.contains("email_imap_messages_fetched_total"));
+    }
+
+    #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+    #[serial_test::serial]
+    async fn admin_list_tenants_enumerates_configured_tenants() {
+        // Wire two tenant configs into the cell; admin verb must
+        // emit per-tenant rows with account counts + allow_agents.
+        let cfg_a = crate::config::EmailPluginConfig {
+            instance: Some("empresa_a".into()),
+            allow_agents: vec!["ana".into()],
+            enabled: true,
+            max_body_bytes: 1024,
+            max_attachment_bytes: 1024,
+            attachment_retention_days: 1,
+            max_dlq_lines: 1,
+            bounce_retention_days: 1,
+            attachments_dir: "/tmp/x".into(),
+            outbound_queue_dir: "/tmp/y".into(),
+            poll_fallback_seconds: 60,
+            idle_reissue_minutes: 25,
+            spf_dkim_warn: false,
+            loop_prevention: crate::config::LoopPreventionCfg::default(),
+            accounts: vec![],
+        };
+        let mut cfg_b = cfg_a.clone();
+        cfg_b.instance = Some("empresa_b".into());
+        cfg_b.allow_agents.clear();
+        *crate::configured_state().write().await = Some(vec![cfg_a, cfg_b]);
+
+        let r = admin_handle(&json!({
+            "method": "nexo/admin/email/list_tenants",
+            "params": {},
+        }))
+        .await;
+        assert_eq!(r["ok"].as_bool(), Some(true), "got {r}");
+        let tenants = r["result"]["tenants"].as_array().expect("tenants array");
+        assert_eq!(tenants.len(), 2);
+        assert_eq!(tenants[0]["tenant"].as_str(), Some("empresa_a"));
+        assert_eq!(tenants[0]["allow_agents"][0].as_str(), Some("ana"));
+        assert_eq!(tenants[1]["tenant"].as_str(), Some("empresa_b"));
+
+        *crate::configured_state().write().await = None;
+    }
+
+    #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+    async fn admin_unknown_method_reports_error() {
+        let r = admin_handle(&json!({
+            "method": "nexo/admin/email/nonexistent",
+            "params": {},
+        }))
+        .await;
+        assert_eq!(r["ok"].as_bool(), Some(false));
     }
 }
