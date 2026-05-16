@@ -119,6 +119,36 @@ pub fn inc_outbound_failed(instance: &str) {
 pub async fn render_prometheus(health: Option<&HealthMap>) -> String {
     let mut out = String::new();
 
+    // 0.5.2 / Wave 3 deferred #1 — tenant label exposed as a
+    // process-wide info gauge. Each subprocess runs ONE tenant
+    // (per Wave 2 daemon-side `register_instance_subprocess_factories`);
+    // operators join existing account-level series against this
+    // gauge in PromQL to slice metrics per tenant:
+    //
+    //   sum by (tenant) (
+    //     email_imap_messages_fetched_total
+    //     * on (job) group_left (tenant) email_plugin_tenant_info
+    //   )
+    //
+    // Resolved from `configured_state` — falls back to `"default"`
+    // when no tenant label was declared (legacy single-tenant).
+    let tenant = {
+        let guard = crate::configured_state().read().await;
+        guard
+            .as_ref()
+            .and_then(|vec| vec.first())
+            .and_then(|c| c.instance.clone())
+            .unwrap_or_else(|| "default".to_string())
+    };
+    out.push_str(
+        "# HELP email_plugin_tenant_info Identifies the tenant served by this plugin process (label join target).\n",
+    );
+    out.push_str("# TYPE email_plugin_tenant_info gauge\n");
+    out.push_str(&format!(
+        "email_plugin_tenant_info{{tenant=\"{}\"}} 1\n",
+        escape(&tenant)
+    ));
+
     // Counters first — they have stable cardinality.
     out.push_str(
         "# HELP email_imap_messages_fetched_total Total IMAP messages fetched per instance.\n",
