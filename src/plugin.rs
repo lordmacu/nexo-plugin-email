@@ -1,11 +1,11 @@
 use std::path::PathBuf;
 use std::sync::Arc;
 
+use crate::config::EmailPluginConfig;
 use async_trait::async_trait;
 use nexo_auth::email::EmailCredentialStore;
 use nexo_auth::google::GoogleCredentialStore;
 use nexo_broker::AnyBroker;
-use crate::config::EmailPluginConfig;
 use nexo_core::agent::plugin::{Command, Plugin, Response};
 use nexo_core::agent::plugin_host::{
     NexoPlugin, PluginInitContext, PluginInitError, PluginShutdownError,

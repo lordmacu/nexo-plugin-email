@@ -29,9 +29,9 @@
 use std::path::{Path, PathBuf};
 use std::sync::Arc;
 
+use crate::config::{EmailPluginConfig, EmailPluginConfigFile};
 use nexo_auth::email::{load_email_secrets, EmailCredentialStore};
 use nexo_auth::google::{GoogleAccount, GoogleCredentialStore};
-use crate::config::{EmailPluginConfig, EmailPluginConfigFile};
 
 const ENV_CONFIG_PATH: &str = "NEXO_PLUGIN_EMAIL_CONFIG_PATH";
 const ENV_GOOGLE_AUTH_PATH: &str = "NEXO_PLUGIN_EMAIL_GOOGLE_AUTH_PATH";
@@ -131,9 +131,7 @@ fn load_email_yaml(path: &Path) -> Result<EmailPluginConfig, EnvConfigError> {
         .next()
         .ok_or_else(|| EnvConfigError::ParseConfig {
             path: path.to_path_buf(),
-            source: serde::de::Error::custom(
-                "email plugin config has no entries (empty sequence)",
-            ),
+            source: serde::de::Error::custom("email plugin config has no entries (empty sequence)"),
         })?)
 }
 

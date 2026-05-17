@@ -5,9 +5,9 @@
 
 use std::sync::Arc;
 
+use crate::config::EmailProvider;
 use anyhow::{anyhow, Result};
 use async_trait::async_trait;
-use crate::config::EmailProvider;
 use nexo_core::agent::context::AgentContext;
 use nexo_core::agent::tool_registry::{ToolHandler, ToolRegistry};
 use nexo_llm::ToolDef;

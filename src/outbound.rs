@@ -18,13 +18,13 @@ use std::path::Path;
 use std::sync::Arc;
 use std::time::Duration;
 
+use crate::config::{EmailAccountConfig, EmailPluginConfig};
 use anyhow::{anyhow, Context, Result};
 use chrono::Utc;
 use dashmap::DashMap;
 use nexo_auth::email::EmailCredentialStore;
 use nexo_auth::google::GoogleCredentialStore;
 use nexo_broker::{AnyBroker, BrokerHandle, Event};
-use crate::config::{EmailAccountConfig, EmailPluginConfig};
 use nexo_resilience::{CircuitBreaker, CircuitBreakerConfig};
 use rand::Rng;
 use tokio::sync::RwLock;

@@ -31,11 +31,7 @@ fn rpc(stdin: &mut ChildStdin, stdout: &mut BufReader<ChildStdout>, frame: Value
     serde_json::from_str(buf.trim()).expect("reply parses as JSON")
 }
 
-fn spawn_clean() -> (
-    std::process::Child,
-    ChildStdin,
-    BufReader<ChildStdout>,
-) {
+fn spawn_clean() -> (std::process::Child, ChildStdin, BufReader<ChildStdout>) {
     let mut cmd = Command::new(BINARY);
     cmd.stdin(Stdio::piped())
         .stdout(Stdio::piped())

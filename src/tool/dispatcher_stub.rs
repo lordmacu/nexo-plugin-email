@@ -6,12 +6,12 @@
 
 use std::sync::{Arc, Mutex};
 
+use crate::config::EmailPluginConfigFile;
 use anyhow::Result;
 use async_trait::async_trait;
 use dashmap::DashMap;
 use nexo_auth::email::EmailCredentialStore;
 use nexo_auth::google::GoogleCredentialStore;
-use crate::config::EmailPluginConfigFile;
 
 use crate::events::OutboundCommand;
 use crate::inbound::HealthMap;

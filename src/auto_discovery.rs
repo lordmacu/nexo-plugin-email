@@ -201,10 +201,7 @@ fn respond(status: u16, content_type: &str, body: &[u8]) -> Value {
 // ── Stage 4 — admin RPC ────────────────────────────────────────
 
 pub async fn admin_handle(request: &Value) -> Value {
-    let method = request
-        .get("method")
-        .and_then(|v| v.as_str())
-        .unwrap_or("");
+    let method = request.get("method").and_then(|v| v.as_str()).unwrap_or("");
     match method {
         "nexo/admin/email/bot_info" => {
             let instances = configured_instances().await;
@@ -234,12 +231,8 @@ pub async fn admin_handle(request: &Value) -> Value {
                 .map(|vec| {
                     vec.iter()
                         .map(|cfg| {
-                            let label = cfg
-                                .instance
-                                .clone()
-                                .unwrap_or_else(|| "default".into());
-                            let registered =
-                                crate::instance_registry::lookup(&label).is_some();
+                            let label = cfg.instance.clone().unwrap_or_else(|| "default".into());
+                            let registered = crate::instance_registry::lookup(&label).is_some();
                             json!({
                                 "tenant": label,
                                 "accounts_count": cfg.accounts.len(),

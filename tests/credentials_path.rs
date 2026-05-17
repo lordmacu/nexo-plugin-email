@@ -127,7 +127,9 @@ async fn issue_accepts_known_instance() {
 #[serial]
 async fn issue_rejects_unknown_instance() {
     *configured_state().write().await = Some(vec![parse_cfg(FIXTURE)]);
-    let err = issue_handler("ghost").await.expect_err("expected not_found");
+    let err = issue_handler("ghost")
+        .await
+        .expect_err("expected not_found");
     assert_eq!(err, "not_found");
     *configured_state().write().await = None;
 }

@@ -66,9 +66,7 @@ fn rpc_round_trip(
     let started = Instant::now();
     loop {
         if started.elapsed() > HANDSHAKE_TIMEOUT {
-            panic!(
-                "nexo-plugin-email: no reply within {HANDSHAKE_TIMEOUT:?} for frame {line}",
-            );
+            panic!("nexo-plugin-email: no reply within {HANDSHAKE_TIMEOUT:?} for frame {line}",);
         }
         match stdout.read_line(&mut buf) {
             Ok(0) => panic!("nexo-plugin-email: stdout EOF before reply"),
@@ -80,9 +78,8 @@ fn rpc_round_trip(
             Err(e) => panic!("nexo-plugin-email: read_line error: {e}"),
         }
     }
-    serde_json::from_str(buf.trim()).unwrap_or_else(|e| {
-        panic!("nexo-plugin-email: reply not JSON: {e} (raw: {buf:?})")
-    })
+    serde_json::from_str(buf.trim())
+        .unwrap_or_else(|e| panic!("nexo-plugin-email: reply not JSON: {e} (raw: {buf:?})"))
 }
 
 #[test]
@@ -171,7 +168,10 @@ fn tool_invoke_for_unknown_name_returns_not_found() {
         }),
     );
 
-    assert!(reply.get("error").is_some(), "tool.invoke must error on unknown tool");
+    assert!(
+        reply.get("error").is_some(),
+        "tool.invoke must error on unknown tool"
+    );
     let code = reply["error"]["code"].as_i64().unwrap_or(0);
     assert_eq!(code, -33401, "expected NotFound code (-33401), got {code}");
 

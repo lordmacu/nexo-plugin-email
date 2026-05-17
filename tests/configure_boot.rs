@@ -22,10 +22,7 @@ async fn reset() {
     instance_registry::clear();
 }
 
-fn stub_factory(
-    cfg: EmailPluginConfig,
-    data_dir: PathBuf,
-) -> Result<Arc<EmailPlugin>, String> {
+fn stub_factory(cfg: EmailPluginConfig, data_dir: PathBuf) -> Result<Arc<EmailPlugin>, String> {
     use nexo_auth::email::EmailCredentialStore;
     use nexo_auth::google::GoogleCredentialStore;
     Ok(Arc::new(EmailPlugin::new(
@@ -40,9 +37,7 @@ fn stub_factory(
 #[serial]
 async fn configure_with_two_tenants_registers_both() {
     reset().await;
-    let v = yaml(
-        "- instance: empresa_a\n  accounts: []\n- instance: empresa_b\n  accounts: []\n",
-    );
+    let v = yaml("- instance: empresa_a\n  accounts: []\n- instance: empresa_b\n  accounts: []\n");
     apply_configure(v, Path::new("/tmp/nexo-email-test"), stub_factory)
         .await
         .expect("configure ok");

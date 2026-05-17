@@ -70,9 +70,7 @@ pub fn email_tool_defs() -> Vec<SdkToolDef> {
 /// Subprocess `tool.invoke` dispatcher. Looks up the live
 /// `Arc<EmailPlugin>`, builds an `EmailToolContext`, and routes
 /// to the per-tool handler.
-pub async fn dispatch_email_tool(
-    invocation: ToolInvocation,
-) -> Result<Value, ToolInvocationError> {
+pub async fn dispatch_email_tool(invocation: ToolInvocation) -> Result<Value, ToolInvocationError> {
     // Match name FIRST so unknown tools return NotFound (-33401)
     // even when the plugin hasn't booted yet — preserves the wire
     // contract.

@@ -5,9 +5,9 @@ use std::sync::Arc;
 use anyhow::Result;
 use async_trait::async_trait;
 
+use crate::config::EmailPluginConfig;
 use nexo_auth::email::EmailCredentialStore;
 use nexo_auth::google::GoogleCredentialStore;
-use crate::config::EmailPluginConfig;
 
 use crate::events::OutboundCommand;
 use crate::inbound::HealthMap;
@@ -52,10 +52,7 @@ impl EmailToolContext {
     /// Look up an account's `EmailAccountConfig` by instance id, or
     /// `None` when the operator hasn't declared it. Tools surface
     /// this as `unknown email instance: <id>` in the result envelope.
-    pub fn account(
-        &self,
-        instance: &str,
-    ) -> Option<&crate::config::EmailAccountConfig> {
+    pub fn account(&self, instance: &str) -> Option<&crate::config::EmailAccountConfig> {
         self.config.accounts.iter().find(|a| a.instance == instance)
     }
 }

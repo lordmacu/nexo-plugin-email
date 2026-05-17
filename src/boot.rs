@@ -33,9 +33,7 @@ pub fn sanitize_tenant_label(raw: &str) -> Result<String, String> {
         return Err("tenant label is empty".to_string());
     }
     if trimmed.chars().count() > 64 {
-        return Err(format!(
-            "tenant label `{trimmed}` exceeds 64 characters"
-        ));
+        return Err(format!("tenant label `{trimmed}` exceeds 64 characters"));
     }
     for c in trimmed.chars() {
         if !(c.is_ascii_alphanumeric() || c == '_' || c == '-') {
@@ -67,8 +65,8 @@ pub async fn apply_configure<F>(
 where
     F: Fn(EmailPluginConfig, std::path::PathBuf) -> Result<Arc<EmailPlugin>, String>,
 {
-    let shape: EmailPluginShape = serde_yaml::from_value(value)
-        .map_err(|e| format!("invalid email config: {e}"))?;
+    let shape: EmailPluginShape =
+        serde_yaml::from_value(value).map_err(|e| format!("invalid email config: {e}"))?;
 
     let configs: Vec<EmailPluginConfig> = match shape {
         EmailPluginShape::Single(c) => {
@@ -120,9 +118,8 @@ where
     let mut snapshot: Vec<EmailPluginConfig> = Vec::with_capacity(resolved.len());
     for (label, cfg, data_dir) in resolved {
         snapshot.push(cfg.clone());
-        let plugin = factory(cfg, data_dir).map_err(|e| {
-            format!("factory failed for tenant `{label}`: {e}")
-        })?;
+        let plugin = factory(cfg, data_dir)
+            .map_err(|e| format!("factory failed for tenant `{label}`: {e}"))?;
         instance_registry::register(&label, plugin);
         tracing::info!(
             target: "plugin.email",

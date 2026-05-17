@@ -241,6 +241,7 @@ pub fn register(registry: &ToolRegistry, ctx: Arc<EmailToolContext>) {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::config::EmailPluginConfigFile;
     use crate::events::OutboundCommand;
     use crate::inbound::HealthMap;
     use anyhow::Result;
@@ -248,7 +249,6 @@ mod tests {
     use dashmap::DashMap;
     use nexo_auth::email::EmailCredentialStore;
     use nexo_auth::google::GoogleCredentialStore;
-    use crate::config::EmailPluginConfigFile;
     use std::sync::Mutex;
 
     /// Test stub of `DispatcherHandle` that records every call and

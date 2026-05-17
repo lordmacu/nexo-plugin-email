@@ -30,9 +30,7 @@ use std::sync::Arc;
 use nexo_broker::AnyBroker;
 use nexo_core::agent::plugin::Plugin;
 use nexo_microapp_sdk::plugin::{PluginAdapter, ToolInvocation};
-use nexo_plugin_email::{
-    dispatch_email_tool, email_config_from_env, email_tool_defs, EmailPlugin,
-};
+use nexo_plugin_email::{dispatch_email_tool, email_config_from_env, email_tool_defs, EmailPlugin};
 use once_cell::sync::Lazy;
 use tokio::sync::OnceCell;
 
@@ -45,8 +43,7 @@ const MANIFEST: &str = include_str!("../nexo-plugin.toml");
 static PLUGIN: Lazy<OnceCell<Arc<EmailPlugin>>> = Lazy::new(OnceCell::new);
 
 async fn boot_plugin() -> anyhow::Result<Arc<EmailPlugin>> {
-    let boot = email_config_from_env()
-        .map_err(|e| anyhow::anyhow!("env config: {e}"))?;
+    let boot = email_config_from_env().map_err(|e| anyhow::anyhow!("env config: {e}"))?;
 
     let broker_url = std::env::var("NEXO_BROKER_URL")
         .map_err(|_| anyhow::anyhow!("NEXO_BROKER_URL not set — daemon must seed it"))?;
@@ -150,10 +147,8 @@ async fn main() -> anyhow::Result<()> {
             // configured_state stores Vec<EmailPluginConfig>; the
             // legacy reader picks the first entry.
             let shape: nexo_plugin_email::config::EmailPluginShape =
-                serde_yaml::from_value(value)
-                    .map_err(|e| format!("invalid email config: {e}"))?;
-            *nexo_plugin_email::configured_state().write().await =
-                Some(shape.into_vec());
+                serde_yaml::from_value(value).map_err(|e| format!("invalid email config: {e}"))?;
+            *nexo_plugin_email::configured_state().write().await = Some(shape.into_vec());
             Ok(())
         })
         // Phase 93.8.c — credential store contribution. Daemon's
@@ -257,12 +252,16 @@ fn spawn_auto_discovery_subscribers(broker: AnyBroker) {
         |_b, p| async move { ad::pairing_send_qr_image(&p).await },
     );
 
-    spawn_one(broker.clone(), "plugin.email.http.request", |_b, p| async move {
-        ad::http_request(&p).await
-    });
-    spawn_one(broker.clone(), "plugin.email.metrics.scrape", |_b, p| async move {
-        ad::metrics_scrape(&p).await
-    });
+    spawn_one(
+        broker.clone(),
+        "plugin.email.http.request",
+        |_b, p| async move { ad::http_request(&p).await },
+    );
+    spawn_one(
+        broker.clone(),
+        "plugin.email.metrics.scrape",
+        |_b, p| async move { ad::metrics_scrape(&p).await },
+    );
     spawn_one(broker, "plugin.email.admin.>", |_b, p| async move {
         ad::admin_handle(&p).await
     });
@@ -315,6 +314,10 @@ where
                 );
             }
         }
-        tracing::debug!(target = "email.auto_discovery", topic, "subscriber stream ended");
+        tracing::debug!(
+            target = "email.auto_discovery",
+            topic,
+            "subscriber stream ended"
+        );
     });
 }
