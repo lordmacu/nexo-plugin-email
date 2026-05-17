@@ -90,8 +90,7 @@ async fn configure_duplicate_tenant_label_errors() {
         stub_factory,
     )
     .await
-    .err()
-    .expect("duplicate must fail");
+    .expect_err("duplicate must fail");
     assert!(
         err.to_lowercase().contains("duplicate"),
         "error must mention duplicate: {err}"
@@ -111,8 +110,7 @@ async fn configure_invalid_tenant_label_errors() {
         stub_factory,
     )
     .await
-    .err()
-    .expect("invalid label must fail");
+    .expect_err("invalid label must fail");
     assert!(
         err.to_lowercase().contains("invalid"),
         "error must mention invalid: {err}"
